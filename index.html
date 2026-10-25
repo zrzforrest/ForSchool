@@ -26,7 +26,6 @@
     font-family:-apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
     overflow:hidden;
   }
-
   /* ===== 顶部输入栏（绝对坐标，贴左上角） ===== */
   #topbar{
     position:absolute;
@@ -80,7 +79,6 @@
     color:#fff;
   }
   .btn-primary:hover{background:var(--accent-strong);border-color:var(--accent-strong);}
-
   /* ===== 预览窗口（800×600，贴左上角，绝对坐标） ===== */
   #window{
     position:absolute;
@@ -129,14 +127,6 @@
     border-radius:4px;
   }
   #win-refresh:hover{color:var(--text);background:var(--border);}
-
-  #frame{
-    position:absolute;
-    top:30px;left:0;
-    width:800px;height:600px;
-    border:0;background:#fff;
-    transform-origin:top left;
-  }
   #zoom-group{flex:none;display:flex;align-items:center;gap:2px;}
   .zoom-btn{
     width:22px;height:22px;
@@ -156,7 +146,69 @@
     font-size:12px;color:var(--muted);
     font-variant-numeric:tabular-nums;
   }
-
+  /* ===== 可滚动视口（替代原 iframe 直接定位） ===== */
+  #viewport{
+    position:absolute;
+    top:30px;left:0;
+    width:800px;height:600px;
+    overflow:auto;
+    scrollbar-width:none;          /* Firefox：隐藏原生滚动条 */
+  }
+  #viewport::-webkit-scrollbar{width:0;height:0;display:none;}
+  #frame{
+    position:absolute;
+    top:0;left:0;
+    width:800px;height:600px;
+    border:0;background:#fff;
+  }
+  /* ===== 自定义滚动条（垂直在左、水平在上，浮层式） ===== */
+  #corner{
+    position:absolute;
+    top:30px;left:0;
+    width:14px;height:14px;
+    background:var(--panel);
+    border-right:1px solid var(--border);
+    border-bottom:1px solid var(--border);
+    z-index:6;
+  }
+  #vscroll{
+    position:absolute;
+    top:44px;left:0;
+    width:14px;height:586px;
+    background:rgba(22,24,29,.55);
+    border-right:1px solid var(--border);
+    z-index:6;
+    transition:background .15s;
+  }
+  #vscroll:hover{background:rgba(43,48,60,.7);}
+  #v-thumb{
+    position:absolute;
+    left:2px;top:0;
+    width:10px;
+    background:var(--border-strong);
+    border-radius:5px;
+    cursor:pointer;
+  }
+  #vscroll:hover #v-thumb{background:#4b5366;}
+  #hscroll{
+    position:absolute;
+    top:30px;left:14px;
+    width:786px;height:14px;
+    background:rgba(22,24,29,.55);
+    border-bottom:1px solid var(--border);
+    z-index:6;
+    transition:background .15s;
+  }
+  #hscroll:hover{background:rgba(43,48,60,.7);}
+  #h-thumb{
+    position:absolute;
+    top:2px;left:0;
+    height:10px;
+    background:var(--border-strong);
+    border-radius:5px;
+    cursor:pointer;
+  }
+  #hscroll:hover #h-thumb{background:#4b5366;}
   /* ===== 右下角说明（绝对坐标） ===== */
   #note{
     position:absolute;
@@ -167,7 +219,6 @@
     line-height:1.6;
     color:var(--muted);
   }
-
   /* ===== Toast（绝对坐标，居中顶部） ===== */
   #toast{
     position:absolute;
@@ -185,13 +236,9 @@
     white-space:nowrap;
   }
   #toast.show{opacity:1;}
-
-  /* favicon */
-  #favicon{display:none;}
 </style>
 </head>
 <body>
-
 <!-- ===== 顶部输入栏 ===== -->
 <div id="topbar">
   <span id="label">网址</span>
@@ -199,7 +246,6 @@
   <button id="load-btn" class="btn btn-primary">加载</button>
   <button id="refresh-btn" class="btn">刷新</button>
 </div>
-
 <!-- ===== 预览窗口 ===== -->
 <div id="window">
   <div id="win-titlebar">
@@ -215,31 +261,40 @@
       <button id="zoom-in" class="zoom-btn" title="放大" aria-label="放大">+</button>
     </div>
     <button id="win-refresh" title="重新加载" aria-label="重新加载">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36" /><path d="M21 3v6h-6" /></svg>
     </button>
   </div>
-  <iframe id="frame" title="预览网页"></iframe>
+  <!-- 可滚动视口：内容超出 800×600 时出现滚动条 -->
+  <div id="viewport">
+    <iframe id="frame" title="预览网页"></iframe>
+  </div>
+  <!-- 左上角滚动条交界块 + 垂直（左）/ 水平（上）滚动条 -->
+  <div id="corner"></div>
+  <div id="vscroll"><div id="v-thumb"></div></div>
+  <div id="hscroll"><div id="h-thumb"></div></div>
 </div>
-
 <!-- ===== 说明 ===== -->
 <div id="note">
-  顶部栏固定为 800px（最左到最右的「刷新」按钮正好 800px）；预览窗口 800×600 紧贴左上角。默认缩放 100%（iframe 视口即 800px，页面宽度恰好与窗口一致）；若某页面固定宽度过宽，可在窗口标题栏点「−」缩小使其完整容纳。部分网站通过 X-Frame-Options / CSP 禁止被嵌入，此类页面会显示为空白。
+  顶部栏固定为 800px（最左到最右的「刷新」按钮正好 800px）；预览窗口 800×600 紧贴左上角，其左侧为垂直滚动条、顶部为水平滚动条，可拖动滑块或滚轮滚动查看。页面以较大视口完整渲染后由窗口滚动条查看。由于外部跨域网站禁止在窗口外读取内容，页面内容若仍超出 iframe 高度会在页面内部滚动（受浏览器限制）。部分网站通过 X-Frame-Options / CSP 禁止被嵌入，此类页面会显示为空白。
 </div>
-
 <div id="toast"></div>
-
 <script>
 (function(){
   const input    = document.getElementById('url-input');
   const loadBtn  = document.getElementById('load-btn');
   const refreshBtn = document.getElementById('refresh-btn');
   const frame    = document.getElementById('frame');
+  const viewport = document.getElementById('viewport');
   const winUrl   = document.getElementById('win-url');
   const winRefresh = document.getElementById('win-refresh');
   const toast    = document.getElementById('toast');
   const zoomIn   = document.getElementById('zoom-in');
   const zoomOut  = document.getElementById('zoom-out');
   const zoomVal  = document.getElementById('zoom-val');
+  const vscroll  = document.getElementById('vscroll');
+  const vthumb   = document.getElementById('v-thumb');
+  const hscroll  = document.getElementById('hscroll');
+  const hthumb   = document.getElementById('h-thumb');
 
   let toastTimer = null;
   function showToast(msg){
@@ -264,7 +319,6 @@
     winUrl.textContent = target;
     winUrl.title = target;
   }
-
   function reload(){
     if(frame.src){ load(frame.getAttribute('src')); }
   }
@@ -276,20 +330,84 @@
   refreshBtn.onclick = reload;
   winRefresh.onclick = reload;
 
-  // ===== 缩放：改变 iframe 视口宽高并缩放，使页面按缩放比例重排 =====
+  // ===== 缩放：调整 iframe 视口真实尺寸；放大后内容超出视口，靠滚动条查看 =====
   const BASE_W = 800, BASE_H = 600;
+  const TRACK_W = 786, TRACK_H = 586;   // 水平 / 垂直滚动条轨道长度
   let zoom = 1;
-  function applyZoom(){
-    frame.style.width  = (BASE_W / zoom) + 'px';
-    frame.style.height = (BASE_H / zoom) + 'px';
-    frame.style.transform = 'scale(' + zoom + ')';
-    frame.style.transformOrigin = 'top left';
-    zoomVal.textContent = Math.round(zoom * 100) + '%';
-  }
-  zoomIn.onclick = function(){ zoom = Math.min(4, +(zoom * 1.1).toFixed(4)); applyZoom(); };
-  zoomOut.onclick = function(){ zoom = Math.max(0.2, +(zoom / 1.1).toFixed(4)); applyZoom(); };
-  applyZoom();
 
+  function updateScrollbars(){
+    const sw = viewport.scrollWidth,  cw = viewport.clientWidth;
+    const sh = viewport.scrollHeight, ch = viewport.clientHeight;
+
+    // 水平（顶部滚动条）：始终显示；无溢出时滑块占满轨道
+    if(sw > cw){
+      const tw = Math.max(28, TRACK_W * (cw / sw));
+      hthumb.style.width = tw + 'px';
+      const maxS = sw - cw;
+      hthumb.style.left = (maxS > 0 ? (viewport.scrollLeft / maxS) * (TRACK_W - tw) : 0) + 'px';
+    } else {
+      hthumb.style.width = TRACK_W + 'px';
+      hthumb.style.left = '0px';
+    }
+
+    // 垂直（左侧滚动条）：始终显示；无溢出时滑块占满轨道
+    if(sh > ch){
+      const th = Math.max(28, TRACK_H * (ch / sh));
+      vthumb.style.height = th + 'px';
+      const maxS = sh - ch;
+      vthumb.style.top = (maxS > 0 ? (viewport.scrollTop / maxS) * (TRACK_H - th) : 0) + 'px';
+    } else {
+      vthumb.style.height = TRACK_H + 'px';
+      vthumb.style.top = '0px';
+    }
+  }
+
+  function applySize(){
+    // 高度额外加 300px 余量，使外部跨域页面内容能在窗口内滚动查看
+    frame.style.width  = (BASE_W * zoom) + 'px';
+    frame.style.height = (BASE_H * zoom + 300) + 'px';
+    zoomVal.textContent = Math.round(zoom * 100) + '%';
+    updateScrollbars();
+  }
+
+  zoomIn.onclick  = function(){ zoom = Math.min(4, +(zoom * 1.1).toFixed(4)); applySize(); };
+  zoomOut.onclick = function(){ zoom = Math.max(0.2, +(zoom / 1.1).toFixed(4)); applySize(); };
+
+  viewport.addEventListener('scroll', updateScrollbars);
+
+  // ===== 拖动自定义滚动条 =====
+  let drag = null;
+  function startDrag(e, axis){
+    e.preventDefault();
+    drag = {
+      axis: axis,
+      startX: e.clientX, startY: e.clientY,
+      startLeft: viewport.scrollLeft, startTop: viewport.scrollTop
+    };
+  }
+  vthumb.addEventListener('pointerdown', function(e){ startDrag(e, 'v'); });
+  hthumb.addEventListener('pointerdown', function(e){ startDrag(e, 'h'); });
+
+  document.addEventListener('pointermove', function(e){
+    if(!drag) return;
+    if(drag.axis === 'v'){
+      const th = parseFloat(vthumb.style.height) || 28;
+      const maxTrack = TRACK_H - th;
+      const maxScroll = viewport.scrollHeight - viewport.clientHeight;
+      const dy = e.clientY - drag.startY;
+      viewport.scrollTop = drag.startTop + (maxScroll > 0 ? (dy / maxTrack) * maxScroll : 0);
+    } else {
+      const tw = parseFloat(hthumb.style.width) || 28;
+      const maxTrack = TRACK_W - tw;
+      const maxScroll = viewport.scrollWidth - viewport.clientWidth;
+      const dx = e.clientX - drag.startX;
+      viewport.scrollLeft = drag.startLeft + (maxScroll > 0 ? (dx / maxTrack) * maxScroll : 0);
+    }
+    updateScrollbars();
+  });
+  document.addEventListener('pointerup', function(){ drag = null; });
+
+  applySize();
   // 默认加载一个可被嵌入的示例页面
   load('https://example.com');
 })();
