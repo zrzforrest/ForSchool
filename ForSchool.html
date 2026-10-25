@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>固定窗口预览器</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%235b8def'/%3E%3Crect x='16' y='18' width='32' height='28' rx='4' fill='white'/%3E%3Crect x='24' y='26' width='16' height='4' rx='2' fill='%235b8def'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0d0f13;
+    --surface:#16181d;
+    --panel:#1b1e25;
+    --border:#2a2e39;
+    --border-strong:#363b49;
+    --text:#e8eaee;
+    --muted:#98a0ad;
+    --accent:#5b8def;
+    --accent-strong:#4a7fe0;
+    --danger:#e06b6b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    overflow:hidden;
+  }
+
+  /* ===== 顶部输入栏（绝对坐标，贴左上角） ===== */
+  #topbar{
+    position:absolute;
+    top:0;left:0;
+    width:800px;height:54px;
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:0 14px;
+  }
+  #label{
+    font-size:13px;
+    color:var(--muted);
+    flex:none;
+    white-space:nowrap;
+  }
+  #url-input{
+    flex:1;
+    min-width:0;
+    height:32px;
+    padding:0 12px;
+    font-size:14px;
+    color:var(--text);
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:6px;
+    outline:none;
+  }
+  #url-input:focus{border-color:var(--accent);}
+  #url-input::placeholder{color:#5f6673;}
+  .btn{
+    flex:none;
+    height:32px;
+    padding:0 14px;
+    font-size:13px;
+    color:var(--text);
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+  }
+  .btn:hover{border-color:var(--border-strong);background:#21242d;}
+  .btn-primary{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+  }
+  .btn-primary:hover{background:var(--accent-strong);border-color:var(--accent-strong);}
+
+  /* ===== 预览窗口（800×600，贴左上角，绝对坐标） ===== */
+  #window{
+    position:absolute;
+    top:54px;left:0;
+    width:800px;height:630px;
+    background:var(--surface);
+    border:1px solid var(--border-strong);
+    border-radius:8px 8px 0 0;
+    box-shadow:0 8px 28px rgba(0,0,0,.45);
+    overflow:hidden;
+  }
+  #win-titlebar{
+    position:absolute;
+    top:0;left:0;
+    width:100%;height:30px;
+    background:var(--panel);
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:0 10px;
+  }
+  #win-dots{display:flex;gap:5px;flex:none;}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none;}
+  .dot-r{background:#e06b6b;}
+  .dot-y{background:#d9a13b;}
+  .dot-g{background:#5da95f;}
+  #win-url{
+    flex:1;min-width:0;
+    font-size:12px;
+    color:var(--muted);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  #win-refresh{
+    flex:none;
+    width:22px;height:22px;
+    background:transparent;
+    border:none;
+    color:var(--muted);
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:4px;
+  }
+  #win-refresh:hover{color:var(--text);background:var(--border);}
+
+  #frame{
+    position:absolute;
+    top:30px;left:0;
+    width:800px;height:600px;
+    border:0;background:#fff;
+    transform-origin:top left;
+  }
+  #zoom-group{flex:none;display:flex;align-items:center;gap:2px;}
+  .zoom-btn{
+    width:22px;height:22px;
+    background:transparent;
+    border:none;
+    color:var(--muted);
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:4px;
+    font-size:15px;line-height:1;
+  }
+  .zoom-btn:hover{color:var(--text);background:var(--border);}
+  #zoom-val{
+    min-width:42px;text-align:center;
+    font-size:12px;color:var(--muted);
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* ===== 右下角说明（绝对坐标） ===== */
+  #note{
+    position:absolute;
+    top:692px;left:0;
+    width:800px;
+    padding:10px 14px;
+    font-size:12px;
+    line-height:1.6;
+    color:var(--muted);
+  }
+
+  /* ===== Toast（绝对坐标，居中顶部） ===== */
+  #toast{
+    position:absolute;
+    top:64px;left:50%;
+    transform:translateX(-50%);
+    max-width:70%;
+    padding:8px 16px;
+    font-size:13px;
+    color:#fff;
+    background:var(--danger);
+    border-radius:6px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s;
+    white-space:nowrap;
+  }
+  #toast.show{opacity:1;}
+
+  /* favicon */
+  #favicon{display:none;}
+</style>
+</head>
+<body>
+
+<!-- ===== 顶部输入栏 ===== -->
+<div id="topbar">
+  <span id="label">网址</span>
+  <input id="url-input" type="text" placeholder="https://example.com" spellcheck="false" autocomplete="off">
+  <button id="load-btn" class="btn btn-primary">加载</button>
+  <button id="refresh-btn" class="btn">刷新</button>
+</div>
+
+<!-- ===== 预览窗口 ===== -->
+<div id="window">
+  <div id="win-titlebar">
+    <div id="win-dots">
+      <span class="dot dot-r"></span>
+      <span class="dot dot-y"></span>
+      <span class="dot dot-g"></span>
+    </div>
+    <span id="win-url">尚未加载</span>
+    <div id="zoom-group">
+      <button id="zoom-out" class="zoom-btn" title="缩小" aria-label="缩小">−</button>
+      <span id="zoom-val">100%</span>
+      <button id="zoom-in" class="zoom-btn" title="放大" aria-label="放大">+</button>
+    </div>
+    <button id="win-refresh" title="重新加载" aria-label="重新加载">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+    </button>
+  </div>
+  <iframe id="frame" title="预览网页"></iframe>
+</div>
+
+<!-- ===== 说明 ===== -->
+<div id="note">
+  顶部栏固定为 800px（最左到最右的「刷新」按钮正好 800px）；预览窗口 800×600 紧贴左上角。默认缩放 100%（iframe 视口即 800px，页面宽度恰好与窗口一致）；若某页面固定宽度过宽，可在窗口标题栏点「−」缩小使其完整容纳。部分网站通过 X-Frame-Options / CSP 禁止被嵌入，此类页面会显示为空白。
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+  const input    = document.getElementById('url-input');
+  const loadBtn  = document.getElementById('load-btn');
+  const refreshBtn = document.getElementById('refresh-btn');
+  const frame    = document.getElementById('frame');
+  const winUrl   = document.getElementById('win-url');
+  const winRefresh = document.getElementById('win-refresh');
+  const toast    = document.getElementById('toast');
+  const zoomIn   = document.getElementById('zoom-in');
+  const zoomOut  = document.getElementById('zoom-out');
+  const zoomVal  = document.getElementById('zoom-val');
+
+  let toastTimer = null;
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toast.classList.remove('show'); }, 2400);
+  }
+
+  function normalize(url){
+    url = url.trim();
+    if(!url) return '';
+    if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    return url;
+  }
+
+  function load(url){
+    let target = url || normalize(input.value);
+    if(!target){ showToast('请先输入网址'); return; }
+    if(!/^https?:\/\//i.test(target)) target = 'https://' + target;
+    frame.src = target;
+    winUrl.textContent = target;
+    winUrl.title = target;
+  }
+
+  function reload(){
+    if(frame.src){ load(frame.getAttribute('src')); }
+  }
+
+  loadBtn.onclick = function(){ load(); };
+  input.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ load(); }
+  });
+  refreshBtn.onclick = reload;
+  winRefresh.onclick = reload;
+
+  // ===== 缩放：改变 iframe 视口宽高并缩放，使页面按缩放比例重排 =====
+  const BASE_W = 800, BASE_H = 600;
+  let zoom = 1;
+  function applyZoom(){
+    frame.style.width  = (BASE_W / zoom) + 'px';
+    frame.style.height = (BASE_H / zoom) + 'px';
+    frame.style.transform = 'scale(' + zoom + ')';
+    frame.style.transformOrigin = 'top left';
+    zoomVal.textContent = Math.round(zoom * 100) + '%';
+  }
+  zoomIn.onclick = function(){ zoom = Math.min(4, +(zoom * 1.1).toFixed(4)); applyZoom(); };
+  zoomOut.onclick = function(){ zoom = Math.max(0.2, +(zoom / 1.1).toFixed(4)); applyZoom(); };
+  applyZoom();
+
+  // 默认加载一个可被嵌入的示例页面
+  load('https://example.com');
+})();
+</script>
+</body>
+</html>
