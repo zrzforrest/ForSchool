@@ -17,18 +17,20 @@
     --accent:#5b8def;
     --accent-strong:#4a7fe0;
     --danger:#e06b6b;
-    /* 尺寸模式变量：主版 800×600，备用版 600×450（body.compact 覆盖） */
+    /* 尺寸模式变量：主版 800×600，备用版 400×300（body.compact 覆盖） */
     --tool-w:800px; --win-w:800px; --win-h:630px;
     --view-w:800px; --view-h:600px;
     --note-top:692px; --note-w:800px;
     --track-w:786px; --track-h:586px;
   }
   body.compact{
-    --tool-w:600px; --win-w:600px; --win-h:480px;
-    --view-w:600px; --view-h:450px;
-    --note-top:542px; --note-w:600px;
-    --track-w:586px; --track-h:436px;
+    --tool-w:400px; --win-w:400px; --win-h:330px;
+    --view-w:400px; --view-h:300px;
+    --note-top:392px; --note-w:400px;
+    --track-w:386px; --track-h:286px;
   }
+  /* 备用版顶栏较窄，隐藏“网址”标签以留出输入框宽度 */
+  body.compact #label{display:none;}
   *{box-sizing:border-box;margin:0;padding:0;}
   html,body{height:100%;}
   body{
@@ -344,14 +346,14 @@
   refreshBtn.onclick = reload;
   winRefresh.onclick = reload;
 
-  // ===== 尺寸模式：主版 800×600；备用版 600×450（URL 带 ?size=600） =====
+  // ===== 尺寸模式：主版 800×600；备用版 400×300（URL 带 ?size=600） =====
   const compact = new URLSearchParams(location.search).get('size') === '600';
   document.body.classList.toggle('compact', compact);
-  document.title = compact ? '固定窗口预览器（600×450 备用版）' : '固定窗口预览器';
-  const BASE_W = compact ? 600 : 800;
-  const BASE_H = compact ? 450 : 600;
-  const TRACK_W = compact ? 586 : 786;   // 水平滚动条轨道长度
-  const TRACK_H = compact ? 436 : 586;   // 垂直滚动条轨道长度
+  document.title = compact ? '固定窗口预览器（400×300 备用版）' : '固定窗口预览器';
+  const BASE_W = compact ? 400 : 800;
+  const BASE_H = compact ? 300 : 600;
+  const TRACK_W = compact ? 386 : 786;   // 水平滚动条轨道长度
+  const TRACK_H = compact ? 286 : 586;   // 垂直滚动条轨道长度
   let zoom = 1;
 
   function updateScrollbars(){
@@ -395,8 +397,8 @@
   viewport.addEventListener('scroll', updateScrollbars);
 
   // ===== 版本切换按钮 + 说明文字 =====
-  modeBtn.textContent = compact ? '← 返回 800×600' : '600×450 备用版';
-  modeBtn.title = compact ? '返回主版本（800×600 窗口）' : '切换到备用版（600×450 窗口）';
+  modeBtn.textContent = compact ? '← 返回 800×600' : '400×300 备用版';
+  modeBtn.title = compact ? '返回主版本（800×600 窗口）' : '切换到备用版（400×300 窗口）';
   modeBtn.addEventListener('click', function(){
     location.href = compact ? location.pathname : location.pathname + '?size=600';
   });
