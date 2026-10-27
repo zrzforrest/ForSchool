@@ -39,6 +39,8 @@
     font-family:-apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
     overflow:hidden;
   }
+  /* ===== 页面舞台：移动端整体缩放适配视口 ===== */
+  #stage{position:relative;transform-origin:top left;}
   /* ===== 顶部输入栏（绝对坐标，贴左上角） ===== */
   #topbar{
     position:absolute;
@@ -252,6 +254,7 @@
 </style>
 </head>
 <body>
+<div id="stage">
 <!-- ===== 顶部输入栏 ===== -->
 <div id="topbar">
   <button id="mode-btn" class="btn" type="button" aria-label="切换版本"></button>
@@ -289,9 +292,10 @@
 </div>
 <!-- ===== 说明 ===== -->
 <div id="note">
-  顶部栏固定为 800px（最左到最右的「刷新」按钮正好 800px）；预览窗口 800×600 紧贴左上角，其左侧为垂直滚动条、顶部为水平滚动条，可拖动滑块或滚轮滚动查看。被预览页面自身的滚动条已禁用，滚动只由本窗口承担；若内容超出 iframe 高度会被裁剪（跨域站点无法读取内容高度，可点「+」放大以容纳更长内容）。部分网站通过 X-Frame-Options / CSP 禁止被嵌入，此类页面会显示为空白。
+  顶部栏固定为 800px（最左到最右的「刷新」按钮正好 800px）；预览窗口 800×600 紧贴左上角，其左侧为垂直滚动条、顶部为水平滚动条，可拖动滑块或滚轮滚动查看。页面以较大视口完整渲染后由窗口滚动条查看。由于外部跨域网站禁止在窗口外读取内容，页面内容若仍超出 iframe 高度会在页面内部滚动（受浏览器限制）。部分网站通过 X-Frame-Options / CSP 禁止被嵌入，此类页面会显示为空白。
 </div>
 <div id="toast"></div>
+</div>
 <script>
 (function(){
   const input    = document.getElementById('url-input');
@@ -311,6 +315,7 @@
   const hthumb   = document.getElementById('h-thumb');
   const modeBtn  = document.getElementById('mode-btn');
   const noteEl   = document.getElementById('note');
+  const stage    = document.getElementById('stage');
 
   let toastTimer = null;
   function showToast(msg){
@@ -384,9 +389,11 @@
   }
 
   function applySize(){
-    // 高度额外加 300px 余量，使外部跨域页面内容能在窗口内滚动查看
-    frame.style.width  = (BASE_W * zoom) + 'px';
-    frame.style.height = (BASE_H * zoom + 300) + 'px';
+    // 布局尺寸固定（供窗口滚动查看长内容）；缩放用 transform 实现视觉放大/缩小
+    frame.style.width  = BASE_W + 'px';
+    frame.style.height = (BASE_H + 300) + 'px';
+    frame.style.transform = 'scale(' + zoom + ')';
+    frame.style.transformOrigin = 'top left';
     zoomVal.textContent = Math.round(zoom * 100) + '%';
     updateScrollbars();
   }
@@ -396,13 +403,37 @@
 
   viewport.addEventListener('scroll', updateScrollbars);
 
+  // ===== 移动端适配：界面整体缩放铺满视口宽度 =====
+  function fitStage(){
+    const vw = document.documentElement.clientWidth;
+    const stageW = compact ? 400 : 800;
+    if(vw < stageW){
+      const s = vw / stageW;
+      const h = 54 + (compact ? 330 : 630) + 64;   // topbar + 窗口 + 说明 布局高
+      stage.style.transform = 'scale(' + s + ')';
+      stage.style.transformOrigin = 'top left';
+      stage.style.width = stageW + 'px';
+      stage.style.height = (h * s) + 'px';
+      document.body.style.height = (h * s) + 'px';
+      document.body.style.overflow = 'auto';
+    } else {
+      stage.style.transform = 'none';
+      stage.style.width = '';
+      stage.style.height = '';
+      document.body.style.height = '';
+      document.body.style.overflow = 'hidden';
+    }
+  }
+  window.addEventListener('resize', fitStage);
+  fitStage();
+
   // ===== 版本切换按钮 + 说明文字 =====
   modeBtn.textContent = compact ? '← 返回 800×600' : '400×300 备用版';
   modeBtn.title = compact ? '返回主版本（800×600 窗口）' : '切换到备用版（400×300 窗口）';
   modeBtn.addEventListener('click', function(){
     location.href = compact ? location.pathname : location.pathname + '?size=600';
   });
-  noteEl.innerHTML = '顶部栏固定为 ' + BASE_W + 'px（最左到最右的「刷新」按钮正好 ' + BASE_W + 'px）；预览窗口 ' + BASE_W + '×' + BASE_H + ' 紧贴左上角，其左侧为垂直滚动条、顶部为水平滚动条，可拖动滑块或滚轮滚动查看。被预览页面自身的滚动条已禁用，滚动只由本窗口承担；若内容超出 iframe 高度会被裁剪（跨域站点无法读取内容高度，可点「+」放大以容纳更长内容）。部分网站通过 X-Frame-Options / CSP 禁止被嵌入，此类页面会显示为空白。';
+  noteEl.innerHTML = '顶部栏固定为 ' + BASE_W + 'px（最左到最右的「刷新」按钮正好 ' + BASE_W + 'px）；预览窗口 ' + BASE_W + '×' + BASE_H + ' 紧贴左上角，其左侧为垂直滚动条、顶部为水平滚动条，可拖动滑块或滚轮滚动查看。被预览页面自身的滚动条已禁用，滚动只由本窗口承担；「+」「−」可缩放页面显示。部分网站通过 X-Frame-Options / CSP 禁止被嵌入，此类页面会显示为空白。';
 
   // ===== 拖动自定义滚动条 =====
   let drag = null;
