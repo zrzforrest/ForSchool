@@ -44,44 +44,44 @@
   .card{
     background:var(--surface);
     border:1px solid var(--border);
-    border-radius:12px;
-    padding:22px 20px;
+    border-radius:10px;
+    padding:16px 14px;
     display:flex;
     flex-direction:column;
-    gap:12px;
+    gap:9px;
     transition:border-color .15s, background .15s;
   }
   .card:hover{border-color:var(--border-strong);background:var(--panel);}
   .card .size{
     align-self:flex-start;
-    font-size:12px;
+    font-size:11px;
     font-weight:600;
     color:var(--accent);
     background:rgba(91,141,239,.12);
     border:1px solid rgba(91,141,239,.35);
     border-radius:999px;
-    padding:3px 10px;
+    padding:2px 8px;
   }
-  .card h2{font-size:18px;font-weight:600;}
+  .card h2{font-size:16px;font-weight:600;}
   .card ul{
     list-style:none;
     display:flex;
     flex-direction:column;
-    gap:6px;
+    gap:5px;
   }
   .card li{
-    font-size:13px;
-    line-height:1.6;
+    font-size:12px;
+    line-height:1.55;
     color:var(--muted);
     display:flex;
-    gap:8px;
+    gap:7px;
     align-items:flex-start;
   }
   .card li::before{
     content:"";
     flex:none;
-    width:5px;height:5px;
-    margin-top:7px;
+    width:4px;height:4px;
+    margin-top:6px;
     border-radius:50%;
     background:var(--accent);
   }
@@ -91,17 +91,17 @@
     align-items:center;
     justify-content:center;
     gap:6px;
-    height:38px;
-    font-size:14px;
+    height:32px;
+    font-size:13px;
     color:#fff;
     text-decoration:none;
     background:var(--accent);
-    border-radius:8px;
+    border-radius:7px;
     transition:background .15s;
   }
   .enter:hover{background:var(--accent-strong);}
   .foot{
-    margin-top:22px;
+    margin-top:18px;
     text-align:center;
     font-size:12px;
     color:#5f6673;
@@ -117,14 +117,14 @@
   </header>
   <div class="cards">
     <section class="card">
-      <span class="size">800 × 600</span>
-      <h2>主版</h2>
+      <span class="size">小游戏</span>
+      <h2>2048</h2>
       <ul>
-        <li>800×600 大窗口，完整呈现页面布局</li>
-        <li>窗口左侧垂直、顶部水平滚动条</li>
-        <li>20%–400% 视觉缩放，一键加载任意网址</li>
+        <li>经典 4×4 合并玩法，向 2048 冲刺</li>
+        <li>四个方向按钮操作，触屏故障也不怕</li>
+        <li>键盘方向键同样可用</li>
       </ul>
-      <a class="enter" href="previewer.html">进入 800×600 主版</a>
+      <a class="enter" href="2048.html">开始游戏</a>
     </section>
     <section class="card">
       <span class="size">400 × 300</span>
@@ -137,14 +137,14 @@
       <a class="enter" href="previewer.html?size=600">进入 400×300 备用版</a>
     </section>
     <section class="card">
-      <span class="size">小游戏</span>
-      <h2>2048</h2>
+      <span class="size">800 × 600</span>
+      <h2>主版</h2>
       <ul>
-        <li>经典 4×4 合并玩法，向 2048 冲刺</li>
-        <li>四个方向按钮操作，触屏故障也不怕</li>
-        <li>键盘方向键同样可用</li>
+        <li>800×600 大窗口，完整呈现页面布局</li>
+        <li>窗口左侧垂直、顶部水平滚动条</li>
+        <li>20%–400% 视觉缩放，一键加载任意网址</li>
       </ul>
-      <a class="enter" href="2048.html">开始游戏</a>
+      <a class="enter" href="previewer.html">进入 800×600 主版</a>
     </section>
   </div>
   <footer class="foot">
