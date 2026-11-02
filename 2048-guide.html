@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2048 玩法教程 · ForSchool</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23eeab4b'/%3E%3Crect x='14' y='14' width='36' height='36' rx='6' fill='%23fdf6ec'/%3E%3Ctext x='32' y='42' font-size='22' font-family='Arial' font-weight='bold' text-anchor='middle' fill='%23eeab4b'%3E2048%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0d0f13;
+    --surface:#16181d;
+    --panel:#1b1e25;
+    --border:#2a2e39;
+    --border-strong:#363b49;
+    --text:#e8eaee;
+    --muted:#98a0ad;
+    --accent:#5b8def;
+    --accent-strong:#4a7fe0;
+    --gold:#eeab4b;
+    --gold-soft:rgba(238,171,75,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    overflow:hidden;
+  }
+  /* ===== 教程舞台：固定 760px 宽，贴左上角；窄视口整体缩放 ===== */
+  #stage{
+    position:absolute;
+    top:0;left:0;
+    width:760px;
+    padding:20px 24px 24px;
+    transform-origin:top left;
+  }
+  /* ===== 顶部操作条 ===== */
+  #topbar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:18px;
+  }
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    height:32px;
+    padding:0 14px;
+    font-size:13px;
+    color:var(--text);
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:7px;
+    text-decoration:none;
+    cursor:pointer;
+  }
+  .btn:hover{border-color:var(--border-strong);background:#21242d;}
+  .btn-primary{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+  }
+  .btn-primary:hover{background:var(--accent-strong);border-color:var(--accent-strong);}
+  .btn-play{
+    margin-left:auto;
+    background:var(--gold);
+    border-color:var(--gold);
+    color:#1a1405;
+    font-weight:600;
+  }
+  .btn-play:hover{background:#f2bc62;border-color:#f2bc62;}
+  /* ===== 标题区 ===== */
+  .hero{margin-bottom:18px;}
+  .hero .tag{
+    display:inline-block;
+    font-size:11px;
+    font-weight:600;
+    color:var(--gold);
+    background:var(--gold-soft);
+    border:1px solid rgba(238,171,75,.35);
+    border-radius:999px;
+    padding:2px 10px;
+    margin-bottom:10px;
+  }
+  .hero h1{font-size:26px;font-weight:700;letter-spacing:.5px;}
+  .hero .sub{
+    margin-top:8px;
+    font-size:14px;
+    color:var(--muted);
+    line-height:1.7;
+  }
+  /* ===== 内容节 ===== */
+  .sec{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:16px 18px;
+    margin-bottom:12px;
+  }
+  .sec h2{
+    font-size:16px;
+    font-weight:600;
+    display:flex;
+    align-items:center;
+    gap:9px;
+    margin-bottom:10px;
+  }
+  .sec h2 .no{
+    flex:none;
+    width:22px;height:22px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+    font-weight:700;
+    color:var(--accent);
+    background:rgba(91,141,239,.12);
+    border:1px solid rgba(91,141,239,.35);
+    border-radius:6px;
+  }
+  .sec p{
+    font-size:13px;
+    line-height:1.75;
+    color:#c6ccd6;
+    margin-bottom:8px;
+  }
+  .sec ul{
+    list-style:none;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .sec li{
+    font-size:13px;
+    line-height:1.65;
+    color:var(--muted);
+    display:flex;
+    gap:8px;
+    align-items:flex-start;
+  }
+  .sec li b{color:var(--text);font-weight:600;}
+  .sec li::before{
+    content:"";
+    flex:none;
+    width:5px;height:5px;
+    margin-top:8px;
+    border-radius:50%;
+    background:var(--accent);
+  }
+  .sec.tips li::before{background:var(--gold);}
+  /* 操作说明中的方向键示意 */
+  .keys{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    margin-top:2px;
+  }
+  .key{
+    width:34px;height:34px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:14px;
+    color:var(--text);
+    background:var(--panel);
+    border:1px solid var(--border-strong);
+    border-radius:8px;
+  }
+  .key-label{
+    font-size:12px;
+    color:var(--muted);
+  }
+  .pad-grid{
+    display:grid;
+    grid-template-columns:repeat(3,34px);
+    grid-auto-rows:34px;
+    gap:6px;
+    width:max-content;
+    margin:10px 0 4px;
+  }
+  .pad-grid .key:nth-child(1){grid-column:2;}
+  .pad-grid .key:nth-child(2){grid-column:1;grid-row:2;}
+  .pad-grid .key:nth-child(3){grid-column:2;grid-row:2;}
+  .pad-grid .key:nth-child(4){grid-column:3;grid-row:2;}
+  .foot{
+    margin-top:4px;
+    text-align:center;
+    font-size:12px;
+    color:#5f6673;
+    line-height:1.8;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="topbar">
+    <a class="btn" href="index.html">← 返回主页</a>
+    <a class="btn btn-play" href="2048.html">去玩 2048</a>
+  </div>
+  <header class="hero">
+    <span class="tag">2048 教程</span>
+    <h1>2048 怎么玩？看这一篇就够</h1>
+    <p class="sub">经典数字合并游戏：规则很简单，想冲到 2048 甚至更高，需要一点策略。本页基于本站 2048 的按钮操作编写。</p>
+  </header>
+
+  <section class="sec">
+    <h2><span class="no">1</span>游戏规则：滑动合并数字</h2>
+    <p>棋盘是 4×4 共 16 格。每走一步，棋盘会朝你指定的方向整体滑动，规则只有两条：</p>
+    <ul>
+      <li><b>数字移动</b>：所有方块朝滑动方向贴边移动，中间不留空。</li>
+      <li><b>相同数字合并</b>：两个数字相同的方块撞在一起会合成一个，数字翻倍（2+2=4，4+4=8…）。</li>
+      <li><b>每步新方块</b>：每次滑动后，空位会随机出现一个新的 2 或 4。</li>
+      <li><b>目标</b>：合成出 2048 即获胜；16 格全部填满且无法再合并时游戏结束。</li>
+    </ul>
+  </section>
+
+  <section class="sec">
+    <h2><span class="no">2</span>操作方式：按钮或键盘</h2>
+    <p>本版 2048 用四个方向按钮代替触屏滑动（触屏故障也能玩），键盘方向键同样可用：</p>
+    <div class="pad-grid">
+      <span class="key">▲</span>
+      <span class="key">◀</span>
+      <span class="key">▼</span>
+      <span class="key">▶</span>
+    </div>
+    <div class="keys">
+      <span class="key">↑</span><span class="key">↓</span><span class="key">←</span><span class="key">→</span>
+      <span class="key-label">键盘方向键效果相同</span>
+    </div>
+    <p>点击按钮或按方向键即可移动。注意：如果某一步滑动后没有任何方块移动或合并，棋盘不会变化（也不会生成新方块）。</p>
+  </section>
+
+  <section class="sec">
+    <h2><span class="no">3</span>怎么得分</h2>
+    <ul>
+      <li><b>合并即得分</b>：两个方块合并时，得分增加合并后那个方块的值（4+4=8，得 8 分）。</li>
+      <li><b>分数不因失败清零</b>：结束时看到的分数就是本局累计得分，可以和好友比谁分高。</li>
+      <li>分数是"玩得好"的结果，不是目的——<b>稳定的合成节奏</b>自然带来高分。</li>
+    </ul>
+  </section>
+
+  <section class="sec tips">
+    <h2><span class="no">4</span>进阶技巧：冲 2048 的核心思路</h2>
+    <ul>
+      <li><b>把最大数锁进角落</b>：一开始就选一个角落（比如右下角）作为"基地"，最大数永远待在那里。</li>
+      <li><b>只朝两个方向滑</b>：主力方向（朝角落的方向）+ 一个辅助方向。比如基地在右下角，就主要按 ▼ 和 ▶，其余方向只在必要时用一次。</li>
+      <li><b>保持阶梯序列</b>：让大数沿着同一行/列排成 2、4、8、16、32… 的阶梯，这样一旦新方块出现，很快就能一路合并上去。</li>
+      <li><b>基地那行尽量别反向</b>：最大数锁定的那行/列，不要轻易朝相反方向滑动，否则会把大数从角落拉出来。</li>
+      <li><b>别让 2 卡在角落</b>：新方块是随机的 2 或 4，最怕它出现在角落大数旁边堵路；保持棋盘"清爽"，给合并留出通道。</li>
+      <li><b>慢了就稳</b>：棋盘越满越要慢，先想这一步会不会破坏序列，再决定方向；宁可少动，不要乱动。</li>
+    </ul>
+  </section>
+
+  <section class="sec">
+    <h2><span class="no">5</span>常见误区</h2>
+    <ul>
+      <li><b>四个方向轮流点</b>：东一下西一下，棋盘很快会乱，小数字被大数字堵死。</li>
+      <li><b>只盯最大数</b>：忽略底下的 2、4，等发现时它们已经卡在中间动不了。</li>
+      <li><b>看到能合并就立刻合</b>：有时不合并反而更好——保持序列整齐，等机会一次合成更大的数。</li>
+      <li><b>被 4 打乱节奏</b>：新 4 不算坏消息，提前在序列里给它留位就好。</li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    本站 2048：四方向按钮操作 · 键盘方向键可用 · 固定 500×375 窗口，适配各种屏幕。
+  </footer>
+</div>
+<script>
+  // ===== 窄视口整体缩放适配（教程页固定 760px 宽，贴左上角） =====
+  var stage = document.getElementById('stage');
+  function fitStage(){
+    var vw = document.documentElement.clientWidth;
+    if(vw < 760){
+      var s = vw / 760;
+      stage.style.transform = 'scale(' + s + ')';
+      document.body.style.height = (stage.offsetHeight * s) + 'px';
+      document.body.style.overflow = 'auto';
+    } else {
+      stage.style.transform = 'none';
+      document.body.style.height = '';
+      document.body.style.overflow = 'hidden';
+    }
+  }
+  window.addEventListener('resize', fitStage);
+  fitStage();
+</script>
+</body>
+</html>
