@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>数字华容道教程 · ForSchool</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%235b8def'/%3E%3Crect x='10' y='10' width='44' height='44' rx='6' fill='%23333a4a'/%3E%3Crect x='14' y='14' width='8' height='8' rx='2' fill='%23e8eaee'/%3E%3Crect x='26' y='14' width='8' height='8' rx='2' fill='%23e8eaee'/%3E%3Crect x='38' y='14' width='8' height='8' rx='2' fill='%23e8eaee'/%3E%3Crect x='14' y='26' width='8' height='8' rx='2' fill='%23e8eaee'/%3E%3Crect x='26' y='26' width='8' height='8' rx='2' fill='%23e8eaee'/%3E%3Crect x='38' y='26' width='8' height='8' rx='2' fill='%23e8eaee'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0d0f13;
+    --surface:#16181d;
+    --panel:#1b1e25;
+    --border:#2a2e39;
+    --border-strong:#363b49;
+    --text:#e8eaee;
+    --muted:#98a0ad;
+    --accent:#5b8def;
+    --accent-strong:#4a7fe0;
+    --gold:#eeab4b;
+    --gold-soft:rgba(238,171,75,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    overflow:hidden;
+  }
+  /* ===== 教程舞台：固定 760px 宽，贴左上角；窄视口整体缩放 ===== */
+  #stage{
+    position:absolute;
+    top:0;left:0;
+    width:760px;
+    padding:20px 24px 24px;
+    transform-origin:top left;
+  }
+  /* ===== 顶部操作条 ===== */
+  #topbar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:18px;
+  }
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    height:32px;
+    padding:0 14px;
+    font-size:13px;
+    color:var(--text);
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:7px;
+    text-decoration:none;
+    cursor:pointer;
+  }
+  .btn:hover{border-color:var(--border-strong);background:#21242d;}
+  .btn-play{
+    margin-left:auto;
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+    font-weight:600;
+  }
+  .btn-play:hover{background:var(--accent-strong);border-color:var(--accent-strong);}
+  /* ===== 标题区 ===== */
+  .hero{margin-bottom:18px;}
+  .hero .tag{
+    display:inline-block;
+    font-size:11px;
+    font-weight:600;
+    color:var(--accent);
+    background:rgba(91,141,239,.12);
+    border:1px solid rgba(91,141,239,.35);
+    border-radius:999px;
+    padding:2px 10px;
+    margin-bottom:10px;
+  }
+  .hero h1{font-size:26px;font-weight:700;letter-spacing:.5px;}
+  .hero .sub{
+    margin-top:8px;
+    font-size:14px;
+    color:var(--muted);
+    line-height:1.7;
+  }
+  /* ===== 内容节 ===== */
+  .sec{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:16px 18px;
+    margin-bottom:12px;
+  }
+  .sec h2{
+    font-size:16px;
+    font-weight:600;
+    display:flex;
+    align-items:center;
+    gap:9px;
+    margin-bottom:10px;
+  }
+  .sec h2 .no{
+    flex:none;
+    width:22px;height:22px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+    font-weight:700;
+    color:var(--accent);
+    background:rgba(91,141,239,.12);
+    border:1px solid rgba(91,141,239,.35);
+    border-radius:6px;
+  }
+  .sec p{
+    font-size:13px;
+    line-height:1.75;
+    color:#c6ccd6;
+    margin-bottom:8px;
+  }
+  .sec ul{
+    list-style:none;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .sec li{
+    font-size:13px;
+    line-height:1.65;
+    color:var(--muted);
+    display:flex;
+    gap:8px;
+    align-items:flex-start;
+  }
+  .sec li b{color:var(--text);font-weight:600;}
+  .sec li::before{
+    content:"";
+    flex:none;
+    width:5px;height:5px;
+    margin-top:8px;
+    border-radius:50%;
+    background:var(--accent);
+  }
+  .sec.tips li::before{background:var(--gold);}
+  /* 操作说明中的方向键示意 */
+  .keys{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    margin-top:2px;
+  }
+  .key{
+    width:34px;height:34px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:14px;
+    color:var(--text);
+    background:var(--panel);
+    border:1px solid var(--border-strong);
+    border-radius:8px;
+  }
+  .key-label{
+    font-size:12px;
+    color:var(--muted);
+  }
+  .pad-grid{
+    display:grid;
+    grid-template-columns:repeat(3,34px);
+    grid-auto-rows:34px;
+    gap:6px;
+    width:max-content;
+    margin:10px 0 4px;
+  }
+  .pad-grid .key:nth-child(1){grid-column:2;}
+  .pad-grid .key:nth-child(2){grid-column:1;grid-row:2;}
+  .pad-grid .key:nth-child(3){grid-column:2;grid-row:2;}
+  .pad-grid .key:nth-child(4){grid-column:3;grid-row:2;}
+  /* ===== 示意图：4×4 棋盘 ===== */
+  .demo-board{
+    display:grid;
+    grid-template-columns:repeat(4,44px);
+    gap:4px;
+    margin:10px 0 2px;
+  }
+  .demo-board .t{
+    width:44px;height:44px;
+    border-radius:6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+    font-weight:700;
+    background:#3a4152;
+    color:var(--text);
+  }
+  .t-dim{background:#262b37;color:#6b7280;}
+  .t-empty{background:rgba(255,255,255,.06);}
+  .t-high{background:var(--gold);color:#1a1405;}
+  .fig-cap{
+    font-size:11px;
+    color:var(--muted);
+    margin:4px 0 10px;
+    line-height:1.6;
+  }
+  .foot{
+    margin-top:4px;
+    text-align:center;
+    font-size:12px;
+    color:#5f6673;
+    line-height:1.8;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="topbar">
+    <a class="btn" href="index.html">← 返回主页</a>
+    <a class="btn btn-play" href="huarongdao.html">去玩数字华容道</a>
+  </div>
+  <header class="hero">
+    <span class="tag">数字华容道教程</span>
+    <h1>数字华容道怎么玩？看这一篇就够</h1>
+    <p class="sub">经典 15-puzzle：把打乱的 1–15 按顺序排回 4×4 棋盘。规则一分钟学会，通关要一点套路——本页基于本站数字华容道的按钮 / 点击操作编写。</p>
+  </header>
+
+  <section class="sec">
+    <h2><span class="no">1</span>游戏规则：复原 1–15</h2>
+    <p>棋盘是 4×4 共 16 格，放着 1–15 共 15 个数字块，留 1 个空格。每步把<strong>与空格相邻</strong>的数字块滑入空格（相当于空格换位置）。目标：</p>
+    <div class="demo-board">
+      <span class="t">1</span><span class="t">2</span><span class="t">3</span><span class="t">4</span>
+      <span class="t">5</span><span class="t">6</span><span class="t">7</span><span class="t">8</span>
+      <span class="t">9</span><span class="t">10</span><span class="t">11</span><span class="t">12</span>
+      <span class="t">13</span><span class="t">14</span><span class="t">15</span><span class="t t-empty"></span>
+    </div>
+    <p class="fig-cap">▲ 目标形态：数字 1→15 从左到右、从上到下按顺序排好，空格留在右下角。排到即获胜。</p>
+    <ul>
+      <li><b>空格是"搬运工"</b>：它走到哪里，相邻的数字才能跟着动；理解成"移动空格"比"移动数字"更容易上手。</li>
+      <li><b>任何打乱都能复原吗</b>：本游戏从完成态打乱生成，<b>保证可解</b>，不需要担心遇到无解局。</li>
+    </ul>
+  </section>
+
+  <section class="sec">
+    <h2><span class="no">2</span>操作方式：点击或按钮</h2>
+    <p>两种方式效果一样：</p>
+    <ul>
+      <li><b>点击数字块</b>：点一下与空格相邻的数字块，它就会滑入空格。</li>
+      <li><b>方向按钮 / 键盘方向键</b>：方块朝按键方向滑入空格。按 ▲ = 空格下方的块上移；按 ◀ = 空格右侧的块左移，依此类推。</li>
+    </ul>
+    <div class="pad-grid">
+      <span class="key">▲</span>
+      <span class="key">◀</span>
+      <span class="key">▼</span>
+      <span class="key">▶</span>
+    </div>
+    <p>注意：如果空格不在那个方向的边缘（比如空格在第一行，按 ▲ 就没有块可动），这一步无效、步数也不增加。</p>
+  </section>
+
+  <section class="sec tips">
+    <h2><span class="no">3</span>基本策略 · 先复原前两行（1–8）</h2>
+    <p>不要一上来到处乱滑。先把上面两行当成"已经定好的区域"，一行一行从 1 排到 8：</p>
+    <ul>
+      <li><b>第 1 行：依次放 1、2、3、4</b>。把目标数字"运"到它该在的位置旁边，用空格推它进位——数字越大越先让路，先把 4 就位，再 3、2、1。</li>
+      <li><b>第 2 行：依次放 5、6、7、8</b>。这一行可以借用下方两行的空间"绕路"，不要试图只在前两行里腾挪。</li>
+      <li><b>口诀：先上两行，再下两行；下行当"停车场"</b>——前两行排好前，尽量别动它们。</li>
+    </ul>
+    <div class="demo-board">
+      <span class="t t-high">1</span><span class="t t-high">2</span><span class="t t-high">3</span><span class="t t-high">4</span>
+      <span class="t t-high">5</span><span class="t t-high">6</span><span class="t t-high">7</span><span class="t t-high">8</span>
+      <span class="t t-dim">10</span><span class="t t-dim">9</span><span class="t t-dim">12</span><span class="t t-dim">11</span>
+      <span class="t t-dim">13</span><span class="t t-dim">15</span><span class="t t-dim">14</span><span class="t t-empty"></span>
+    </div>
+    <p class="fig-cap">▲ 前两行（金色）已归位，下面两行还乱着——这时就专注于下面两行，别再把 1–8 碰乱了。</p>
+  </section>
+
+  <section class="sec tips">
+    <h2><span class="no">4</span>基本策略 · 最后两行用"循环法"（9–15）</h2>
+    <p>最后两行不能再用"逐格硬塞"，否则会把已排好的行弄乱。标准做法是转圈：</p>
+    <ul>
+      <li><b>第 3 行：依次放 9、10、11、12</b>。把 9 运到第三行第一格、10 到第二格……此时 13、14、15 和空格留在最后两行右侧，形成一块 <b>3×2 的循环区</b>。</li>
+      <li><b>第 4 行：13、14、15 靠"转圈"就位</b>。在右下角的 3×2 区域里让空格带着 13、14、15 循环打转，把它们逐个转到最终位置。</li>
+      <li><b>口诀：下行靠转圈，13 14 15 最后排</b>。转圈的关键是让三个数贴着右下角区域按顺序转，最后留空格在右下角收尾。</li>
+    </ul>
+    <div class="demo-board">
+      <span class="t t-dim">1</span><span class="t t-dim">2</span><span class="t t-dim">3</span><span class="t t-dim">4</span>
+      <span class="t t-dim">5</span><span class="t t-dim">6</span><span class="t t-dim">7</span><span class="t t-dim">8</span>
+      <span class="t">9</span><span class="t">10</span><span class="t">11</span><span class="t">12</span>
+      <span class="t">13</span><span class="t">14</span><span class="t">15</span><span class="t t-empty"></span>
+    </div>
+    <p class="fig-cap">▲ 当 9–12 也排好后，只剩 13、14、15 与空格在右下角——用 3×2 区域的循环滑动完成最后一步。</p>
+  </section>
+
+  <section class="sec tips">
+    <h2><span class="no">5</span>速记口诀</h2>
+    <ul>
+      <li><b>先上两行，再下两行</b>：永远从上往下做，别跳。</li>
+      <li><b>第一行从左到右</b>：1、2、3、4 依次就位，先大后小放更稳。</li>
+      <li><b>第二行借道下方</b>：5、6、7、8 用下面两行绕路运进来。</li>
+      <li><b>下行靠转圈</b>：9、10、11、12 逐格归位，13、14、15 在 3×2 区转圈收尾。</li>
+      <li><b>空格跟着计划走</b>：每一步都想"这一步为哪个数字开路"，而不是随机滑。</li>
+    </ul>
+  </section>
+
+  <section class="sec">
+    <h2><span class="no">6</span>常见错误</h2>
+    <ul>
+      <li><b>到处乱滑</b>：没有目标地移动，越滑越乱，还不断浪费步数。</li>
+      <li><b>前两行没排好就动下面</b>：等到最后发现 1–8 被自己碰乱，前功尽弃。</li>
+      <li><b>最后一行硬塞</b>：13、14、15 不靠转圈，直接推只会把 9–12 顶乱。</li>
+      <li><b>死磕一个数字</b>：某个数字卡住时，先把空格绕到另一边、或先运旁边的数字，换条路线。</li>
+      <li><b>只看步数不看局面</b>：通关关键是思路正确，步数少是熟练后自然的结果。</li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    本站数字华容道：点击数字块或四方向按钮 / 键盘方向键操作 · 固定 500×375 窗口，适配各种屏幕。
+  </footer>
+</div>
+<script>
+  // ===== 窄视口整体缩放适配（教程页固定 760px 宽，贴左上角） =====
+  var stage = document.getElementById('stage');
+  function fitStage(){
+    var vw = document.documentElement.clientWidth;
+    if(vw < 760){
+      var s = vw / 760;
+      stage.style.transform = 'scale(' + s + ')';
+      document.body.style.height = (stage.offsetHeight * s) + 'px';
+      document.body.style.overflow = 'auto';
+    } else {
+      stage.style.transform = 'none';
+      document.body.style.height = '';
+      document.body.style.overflow = 'auto';   // 桌面：页面内容超高时允许原生滚动
+    }
+  }
+  window.addEventListener('resize', fitStage);
+  fitStage();
+</script>
+</body>
+</html>

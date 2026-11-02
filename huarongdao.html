@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>数字华容道 · ForSchool</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d0f13'/%3E%3Crect x='10' y='10' width='44' height='44' rx='6' fill='%23333a4a'/%3E%3Crect x='14' y='14' width='8' height='8' rx='2' fill='%23e8eaee'/%3E%3Crect x='26' y='14' width='8' height='8' rx='2' fill='%23e8eaee'/%3E%3Crect x='38' y='14' width='8' height='8' rx='2' fill='%23e8eaee'/%3E%3Crect x='14' y='26' width='8' height='8' rx='2' fill='%23e8eaee'/%3E%3Crect x='26' y='26' width='8' height='8' rx='2' fill='%23e8eaee'/%3E%3Crect x='38' y='26' width='8' height='8' rx='2' fill='%23e8eaee'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0d0f13;
+    --surface:#16181d;
+    --panel:#1b1e25;
+    --border:#2a2e39;
+    --border-strong:#363b49;
+    --text:#e8eaee;
+    --muted:#98a0ad;
+    --accent:#5b8def;
+    --accent-strong:#4a7fe0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    overflow:hidden;
+  }
+  /* ===== 游戏舞台：固定 500×375，贴左上角；窄视口整体缩放 ===== */
+  #stage{
+    position:absolute;
+    top:0;left:0;
+    width:500px;height:375px;
+    background:var(--bg);
+    transform-origin:top left;
+  }
+  /* ===== 顶栏 ===== */
+  #topbar{
+    position:absolute;
+    top:0;left:0;
+    width:500px;height:44px;
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:0 12px;
+  }
+  #home-btn{
+    flex:none;
+    height:30px;
+    padding:0 10px;
+    font-size:13px;
+    color:var(--text);
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+  }
+  #home-btn:hover{border-color:var(--border-strong);background:#21242d;}
+  #title{font-size:18px;font-weight:700;letter-spacing:1px;flex:none;}
+  #stat-block{flex:none;display:flex;align-items:baseline;gap:10px;margin-left:auto;}
+  #stat-block .stat{display:flex;align-items:baseline;gap:4px;}
+  .stat-label{font-size:12px;color:var(--muted);}
+  .stat-val{font-size:15px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;}
+  #restart{
+    flex:none;
+    height:30px;
+    padding:0 12px;
+    font-size:13px;
+    color:#fff;
+    background:var(--accent);
+    border:1px solid var(--accent);
+    border-radius:6px;
+    cursor:pointer;
+  }
+  #restart:hover{background:var(--accent-strong);border-color:var(--accent-strong);}
+  /* ===== 4×4 棋盘（306×306，左上角） ===== */
+  #board{
+    position:absolute;
+    top:56px;left:12px;
+    width:306px;height:306px;
+    background:#171b22;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:6px;
+  }
+  .cell{
+    position:absolute;
+    width:72px;height:72px;
+    border-radius:6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:700;
+    line-height:1;
+    cursor:pointer;
+    user-select:none;
+  }
+  .cell.empty{background:#141720;}
+  .cell .num{
+    width:100%;height:100%;
+    border-radius:6px;
+    background:#3a4152;
+    color:var(--text);
+    font-size:24px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:background .1s;
+  }
+  .cell .num:hover{background:#455070;}
+  /* ===== 方向按钮（右侧，十字布局） ===== */
+  #pad{position:absolute;left:336px;top:56px;width:164px;height:306px;}
+  .dir{
+    position:absolute;
+    width:52px;height:52px;
+    border-radius:12px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    color:var(--text);
+    font-size:18px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    user-select:none;
+  }
+  .dir:hover{border-color:var(--border-strong);background:#21242d;}
+  .dir:active{background:var(--accent);color:#fff;}
+  #btn-up{top:0;left:56px;}
+  #btn-left{top:72px;left:0;}
+  #btn-right{top:72px;left:112px;}
+  #btn-down{top:144px;left:56px;}
+  #pad-hint{
+    position:absolute;
+    top:210px;left:0;
+    width:164px;
+    font-size:11px;
+    line-height:1.7;
+    color:var(--muted);
+  }
+  /* ===== 状态浮层（盖在棋盘上） ===== */
+  #overlay{
+    position:absolute;
+    top:56px;left:12px;
+    width:306px;height:306px;
+    background:rgba(13,15,19,.78);
+    border-radius:8px;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    z-index:10;
+  }
+  #overlay.show{display:flex;}
+  #ov-title{font-size:24px;font-weight:700;}
+  #ov-sub{font-size:13px;color:var(--muted);}
+  #ov-restart{
+    height:34px;
+    padding:0 16px;
+    font-size:14px;
+    color:#fff;
+    background:var(--accent);
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  #ov-restart:hover{background:var(--accent-strong);}
+  #ov-links{display:flex;gap:10px;}
+  #ov-links a{
+    height:32px;
+    padding:0 14px;
+    font-size:13px;
+    color:var(--text);
+    background:var(--panel);
+    border:1px solid var(--border-strong);
+    border-radius:8px;
+    cursor:pointer;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+  #ov-links a:hover{background:#21242d;border-color:var(--accent);}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="topbar">
+    <button id="home-btn" type="button" title="返回主页" aria-label="返回主页">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V21h14V9.5" /></svg>
+      主页
+    </button>
+    <span id="title">数字华容道</span>
+    <div id="stat-block">
+      <span class="stat"><span class="stat-label">步数</span><span id="steps" class="stat-val">0</span></span>
+      <span class="stat"><span class="stat-label">用时</span><span id="time" class="stat-val">0:00</span></span>
+    </div>
+    <button id="restart" type="button">新游戏</button>
+  </div>
+  <div id="board"></div>
+  <div id="pad">
+    <button id="btn-up" class="dir" type="button" title="上" aria-label="上">▲</button>
+    <button id="btn-left" class="dir" type="button" title="左" aria-label="左">◀</button>
+    <button id="btn-right" class="dir" type="button" title="右" aria-label="右">▶</button>
+    <button id="btn-down" class="dir" type="button" title="下" aria-label="下">▼</button>
+    <div id="pad-hint">点击空格相邻的数字块，或用方向按钮 / 键盘方向键，把 1–15 按顺序排好。</div>
+  </div>
+  <div id="overlay">
+    <div id="ov-title"></div>
+    <div id="ov-sub"></div>
+    <button id="ov-restart" type="button">再来一局</button>
+    <div id="ov-links">
+      <a href="index.html">返回主页</a>
+      <a href="huarongdao-guide.html">查看教程</a>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  const SIZE = 4;
+  const board = document.getElementById('board');
+  const cells = [];
+  for(let r = 0; r < SIZE; r++){
+    for(let c = 0; c < SIZE; c++){
+      const d = document.createElement('div');
+      d.className = 'cell empty';
+      d.style.top  = (6 + r * 78) + 'px';
+      d.style.left = (6 + c * 78) + 'px';
+      board.appendChild(d);
+      cells.push(d);
+    }
+  }
+
+  const stepsEl = document.getElementById('steps');
+  const timeEl  = document.getElementById('time');
+  const overlay = document.getElementById('overlay');
+  const ovTitle = document.getElementById('ov-title');
+  const ovSub   = document.getElementById('ov-sub');
+
+  let tiles = [], steps = 0, seconds = 0, timer = null, done = false;
+
+  function fmt(s){
+    const m = Math.floor(s / 60), sec = s % 60;
+    return m + ':' + (sec < 10 ? '0' : '') + sec;
+  }
+
+  // 找到空格位置
+  function emptyIdx(){ return tiles.indexOf(0); }
+
+  // dir：方块移动方向（▲=空格下方的块上移，◀=空格右侧的块左移…）
+  function tryMove(dir){
+    const z = emptyIdx();
+    const zr = Math.floor(z / SIZE), zc = z % SIZE;
+    let t = -1;
+    if(dir === 'up'    && zr < SIZE - 1) t = z + SIZE;   // 空格下方块上移
+    else if(dir === 'down'  && zr > 0)   t = z - SIZE;   // 空格上方块下移
+    else if(dir === 'left'  && zc < SIZE - 1) t = z + 1; // 空格右侧块左移
+    else if(dir === 'right' && zc > 0)   t = z - 1;      // 空格左侧块右移
+    if(t < 0) return false;
+    const tmp = tiles[z]; tiles[z] = tiles[t]; tiles[t] = tmp;
+    return true;
+  }
+
+  function step(dir){
+    if(done) return;
+    if(!tryMove(dir)) return;
+    steps++;
+    render();
+    checkWin();
+  }
+
+  // 点击格子：与空格同行/同列相邻才可滑入
+  function clickAt(i){
+    if(done) return;
+    const z = emptyIdx();
+    const sameRow = Math.floor(i / SIZE) === Math.floor(z / SIZE) && Math.abs(i - z) === 1;
+    const sameCol = (i % SIZE) === (z % SIZE) && Math.abs(i - z) === SIZE;
+    if(!sameRow && !sameCol) return;
+    const tmp = tiles[i]; tiles[i] = tiles[z]; tiles[z] = tmp;
+    steps++;
+    render();
+    checkWin();
+  }
+
+  function render(){
+    tiles.forEach(function(v, i){
+      const d = cells[i];
+      if(v === 0){
+        d.className = 'cell empty';
+        d.textContent = '';
+      } else {
+        d.className = 'cell';
+        d.textContent = '';
+        const n = document.createElement('div');
+        n.className = 'num';
+        n.textContent = v;
+        d.appendChild(n);
+      }
+    });
+    stepsEl.textContent = steps;
+  }
+
+  function showOverlay(t, s){
+    ovTitle.textContent = t;
+    ovSub.textContent = s;
+    overlay.classList.add('show');
+  }
+
+  function startTimer(){
+    stopTimer();
+    seconds = 0;
+    timeEl.textContent = fmt(0);
+    timer = setInterval(function(){
+      seconds++;
+      timeEl.textContent = fmt(seconds);
+    }, 1000);
+  }
+  function stopTimer(){
+    if(timer){ clearInterval(timer); timer = null; }
+  }
+
+  function checkWin(){
+    const ok = tiles.every(function(v, i){
+      return v === (i === SIZE * SIZE - 1 ? 0 : i + 1);
+    });
+    if(!ok) return;
+    done = true;
+    stopTimer();
+    showOverlay('完成！', steps + ' 步 · 用时 ' + fmt(seconds));
+  }
+
+  // 从完成态随机打乱（保证可解）
+  function shuffle(){
+    tiles = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0];
+    const dirs = ['up','down','left','right'];
+    let last = '';
+    for(let k = 0; k < 200; k++){
+      const d = dirs[Math.floor(Math.random() * 4)];
+      if(d === last) continue;          // 避免刚推走又拉回来，加快打乱
+      if(tryMove(d)) last = d;
+    }
+    // 极小概率打回完成态：再补打乱
+    let guard = 0;
+    while(tiles.every(function(v, i){ return v === (i === 15 ? 0 : i + 1); }) && guard < 10){
+      for(let k = 0; k < 60; k++) tryMove(dirs[Math.floor(Math.random() * 4)]);
+      guard++;
+    }
+  }
+
+  function newGame(){
+    done = false;
+    steps = 0;
+    overlay.classList.remove('show');
+    shuffle();
+    render();
+    startTimer();
+  }
+
+  // ===== 点击方块（与空格相邻） =====
+  cells.forEach(function(d, i){ d.onclick = function(){ clickAt(i); }; });
+
+  // ===== 四方向按钮 =====
+  document.getElementById('btn-up').onclick    = function(){ step('up'); };
+  document.getElementById('btn-down').onclick  = function(){ step('down'); };
+  document.getElementById('btn-left').onclick  = function(){ step('left'); };
+  document.getElementById('btn-right').onclick = function(){ step('right'); };
+
+  // ===== 键盘方向键（桌面备用操作） =====
+  document.addEventListener('keydown', function(e){
+    const k = e.key;
+    if(k === 'ArrowUp'){ e.preventDefault(); step('up'); }
+    else if(k === 'ArrowDown'){ e.preventDefault(); step('down'); }
+    else if(k === 'ArrowLeft'){ e.preventDefault(); step('left'); }
+    else if(k === 'ArrowRight'){ e.preventDefault(); step('right'); }
+  });
+
+  document.getElementById('restart').onclick = newGame;
+  document.getElementById('ov-restart').onclick = newGame;
+  document.getElementById('home-btn').onclick = function(){ location.href = 'index.html'; };
+
+  // ===== 窄视口整体缩放适配（固定 500×375 左上角布局） =====
+  const stage = document.getElementById('stage');
+  function fitStage(){
+    const vw = document.documentElement.clientWidth;
+    if(vw < 500){
+      const s = vw / 500;
+      stage.style.transform = 'scale(' + s + ')';
+      stage.style.width = '500px';
+      document.body.style.height = (375 * s) + 'px';
+      document.body.style.overflow = 'auto';
+    } else {
+      stage.style.transform = 'none';
+      document.body.style.height = '';
+      document.body.style.overflow = 'hidden';
+    }
+  }
+  window.addEventListener('resize', fitStage);
+  fitStage();
+
+  newGame();
+})();
+</script>
+</body>
+</html>
