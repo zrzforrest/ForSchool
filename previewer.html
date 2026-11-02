@@ -21,13 +21,11 @@
     --tool-w:800px; --win-w:800px; --win-h:630px;
     --view-w:800px; --view-h:600px;
     --note-top:692px; --note-w:800px;
-    --track-w:786px; --track-h:586px;
   }
   body.compact{
     --tool-w:400px; --win-w:400px; --win-h:330px;
     --view-w:400px; --view-h:300px;
     --note-top:392px; --note-w:400px;
-    --track-w:386px; --track-h:286px;
   }
   /* 备用版顶栏较窄，隐藏“网址”标签以留出输入框宽度 */
   body.compact #label{display:none;}
@@ -164,69 +162,20 @@
     font-size:12px;color:var(--muted);
     font-variant-numeric:tabular-nums;
   }
-  /* ===== 可滚动视口（替代原 iframe 直接定位） ===== */
+  /* ===== 可滚动视口（使用页面原生滚动条，浏览器默认位置：右侧垂直、底部水平） ===== */
   #viewport{
     position:absolute;
     top:30px;left:0;
     width:var(--view-w);height:var(--view-h);
     overflow:auto;
-    scrollbar-width:none;          /* Firefox：隐藏原生滚动条 */
+    background:#fff;               /* 模拟浏览器页面背景：缩放后留白区域显示为白色（同电脑浏览器缩小固定宽站点的观感） */
   }
-  #viewport::-webkit-scrollbar{width:0;height:0;display:none;}
   #frame{
     position:absolute;
     top:0;left:0;
     width:var(--view-w);height:var(--view-h);
     border:0;background:#fff;
   }
-  /* ===== 自定义滚动条（垂直在左、水平在上，浮层式） ===== */
-  #corner{
-    position:absolute;
-    top:30px;left:0;
-    width:14px;height:14px;
-    background:var(--panel);
-    border-right:1px solid var(--border);
-    border-bottom:1px solid var(--border);
-    z-index:6;
-  }
-  #vscroll{
-    position:absolute;
-    top:44px;left:0;
-    width:14px;height:var(--track-h);
-    background:rgba(22,24,29,.55);
-    border-right:1px solid var(--border);
-    z-index:6;
-    transition:background .15s;
-  }
-  #vscroll:hover{background:rgba(43,48,60,.7);}
-  #v-thumb{
-    position:absolute;
-    left:2px;top:0;
-    width:10px;
-    background:var(--border-strong);
-    border-radius:5px;
-    cursor:pointer;
-  }
-  #vscroll:hover #v-thumb{background:#4b5366;}
-  #hscroll{
-    position:absolute;
-    top:30px;left:14px;
-    width:var(--track-w);height:14px;
-    background:rgba(22,24,29,.55);
-    border-bottom:1px solid var(--border);
-    z-index:6;
-    transition:background .15s;
-  }
-  #hscroll:hover{background:rgba(43,48,60,.7);}
-  #h-thumb{
-    position:absolute;
-    top:2px;left:0;
-    height:10px;
-    background:var(--border-strong);
-    border-radius:5px;
-    cursor:pointer;
-  }
-  #hscroll:hover #h-thumb{background:#4b5366;}
   /* ===== 右下角说明（绝对坐标） ===== */
   #note{
     position:absolute;
@@ -266,7 +215,7 @@
   </button>
   <button id="mode-btn" class="btn" type="button" aria-label="切换版本"></button>
   <span id="label">网址</span>
-  <input id="url-input" type="text" placeholder="https://example.com" spellcheck="false" autocomplete="off">
+  <input id="url-input" type="text" placeholder="输入网址预览（如 https://www.baidu.com）" spellcheck="false" autocomplete="off">
   <button id="load-btn" class="btn btn-primary">加载</button>
   <button id="refresh-btn" class="btn">刷新</button>
 </div>
@@ -288,23 +237,57 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36" /><path d="M21 3v6h-6" /></svg>
     </button>
   </div>
-  <!-- 可滚动视口：内容超出 800×600 时出现滚动条 -->
+  <!-- 可滚动视口：内容超出 800×600 时由页面原生滚动条滚动（浏览器默认位置：右侧/底部） -->
   <div id="viewport">
     <iframe id="frame" title="预览网页" scrolling="no"></iframe>
   </div>
-  <!-- 左上角滚动条交界块 + 垂直（左）/ 水平（上）滚动条 -->
-  <div id="corner"></div>
-  <div id="vscroll"><div id="v-thumb"></div></div>
-  <div id="hscroll"><div id="h-thumb"></div></div>
 </div>
 <!-- ===== 说明 ===== -->
 <div id="note">
-  顶部栏固定为 800px（最左到最右的「刷新」按钮正好 800px）；预览窗口 800×600 紧贴左上角，其左侧为垂直滚动条、顶部为水平滚动条，可拖动滑块或滚轮滚动查看。页面以较大视口完整渲染后由窗口滚动条查看。由于外部跨域网站禁止在窗口外读取内容，页面内容若仍超出 iframe 高度会在页面内部滚动（受浏览器限制）。部分网站通过 X-Frame-Options / CSP 禁止被嵌入，此类页面会显示为空白。
+  顶部栏固定为 800px（最左到最右的「刷新」按钮正好 800px）；预览窗口 800×600 紧贴左上角，内容超出时由页面原生滚动条滚动查看（浏览器默认位置：右侧垂直、底部水平）。「+」「−」可缩放页面显示。部分网站通过 X-Frame-Options / CSP 禁止被嵌入，此类页面会显示为空白。
 </div>
 <div id="toast"></div>
 </div>
 <script>
 (function(){
+  // 内置响应式演示页：宽度随视口 100% 伸缩（无最大宽度限制），缩放任意比例均铺满预览窗格，且无跨域嵌入限制
+  const DEMO = `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body{margin:0;font-family:system-ui,-apple-system,'Segoe UI','Microsoft YaHei',sans-serif;background:#f7f8fa;color:#1a2333;}
+header{background:#2f6fed;color:#fff;padding:16px 24px;font-size:19px;font-weight:700;}
+nav{background:#fff;border-bottom:1px solid #e2e6ee;padding:8px 24px;font-size:13px;color:#4a5568;display:flex;gap:18px;}
+main{padding:22px 24px;}
+h1{font-size:24px;margin:4px 0 10px;}
+p{line-height:1.7;color:#374151;margin:10px 0;}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px;}
+@media (max-width:700px){.grid{grid-template-columns:1fr;}}
+.box{background:#fff;border:1px solid #e2e6ee;border-radius:10px;padding:16px;}
+.box h3{margin:0 0 8px;font-size:15px;}
+.box p{font-size:13px;color:#6b7280;margin:0;}
+.btn{display:inline-block;margin-top:14px;background:#2f6fed;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;}
+</style>
+</head>
+<body>
+<header>示例门户 · 响应式演示</header>
+<nav>首页 新闻 科技 财经 视频 更多</nav>
+<main>
+<h1>内置响应式示例页</h1>
+<p>用预览器右上角的「+」「−」缩放本页：这是浏览器式缩放，文字会按新的布局宽度重新折行，下方卡片在窄布局下会从三列堆叠为单列，页面始终铺满整个预览窗格。</p>
+<p>本页由预览器内置，不受 X-Frame-Options 限制；输入任意网址可加载真实站点，真实站点缩小后若出现留白属浏览器正常行为。</p>
+<div class="grid">
+  <div class="box"><h3>卡片一</h3><p>第一列内容，随视口宽度变化。</p></div>
+  <div class="box"><h3>卡片二</h3><p>第二列内容，窄视口下自动堆叠。</p></div>
+  <div class="box"><h3>卡片三</h3><p>第三列内容，始终铺满窗格。</p></div>
+</div>
+<button class="btn">了解详情</button>
+</main>
+</body>
+</html>
+`;
   const input    = document.getElementById('url-input');
   const loadBtn  = document.getElementById('load-btn');
   const refreshBtn = document.getElementById('refresh-btn');
@@ -316,10 +299,6 @@
   const zoomIn   = document.getElementById('zoom-in');
   const zoomOut  = document.getElementById('zoom-out');
   const zoomVal  = document.getElementById('zoom-val');
-  const vscroll  = document.getElementById('vscroll');
-  const vthumb   = document.getElementById('v-thumb');
-  const hscroll  = document.getElementById('hscroll');
-  const hthumb   = document.getElementById('h-thumb');
   const homeBtn  = document.getElementById('home-btn');
   const modeBtn  = document.getElementById('mode-btn');
   const noteEl   = document.getElementById('note');
@@ -344,12 +323,17 @@
     let target = url || normalize(input.value);
     if(!target){ showToast('请先输入网址'); return; }
     if(!/^https?:\/\//i.test(target)) target = 'https://' + target;
+    frame.removeAttribute('srcdoc');   // 切回外部网址加载
     frame.src = target;
     winUrl.textContent = target;
     winUrl.title = target;
   }
   function reload(){
-    if(frame.src){ load(frame.getAttribute('src')); }
+    if(frame.getAttribute('srcdoc') !== null){
+      frame.srcdoc = frame.getAttribute('srcdoc');   // 重新渲染内置演示页
+    } else if(frame.src){
+      load(frame.getAttribute('src'));
+    }
   }
 
   loadBtn.onclick = function(){ load(); };
@@ -365,51 +349,43 @@
   document.title = compact ? '固定窗口预览器（400×300 备用版）' : '固定窗口预览器';
   const BASE_W = compact ? 400 : 800;
   const BASE_H = compact ? 300 : 600;
-  const TRACK_W = compact ? 386 : 786;   // 水平滚动条轨道长度
-  const TRACK_H = compact ? 286 : 586;   // 垂直滚动条轨道长度
+  const zoomSupported = 'zoom' in document.documentElement.style;   // Chromium / Safari / Firefox 126+ 支持 reflow 缩放
   let zoom = 1;
 
-  function updateScrollbars(){
-    const sw = viewport.scrollWidth,  cw = viewport.clientWidth;
-    const sh = viewport.scrollHeight, ch = viewport.clientHeight;
+  function isDemo(){ return frame.getAttribute('srcdoc') !== null; }
 
-    // 水平（顶部滚动条）：始终显示；无溢出时滑块占满轨道
-    if(sw > cw){
-      const tw = Math.max(28, TRACK_W * (cw / sw));
-      hthumb.style.width = tw + 'px';
-      const maxS = sw - cw;
-      hthumb.style.left = (maxS > 0 ? (viewport.scrollLeft / maxS) * (TRACK_W - tw) : 0) + 'px';
-    } else {
-      hthumb.style.width = TRACK_W + 'px';
-      hthumb.style.left = '0px';
-    }
-
-    // 垂直（左侧滚动条）：始终显示；无溢出时滑块占满轨道
-    if(sh > ch){
-      const th = Math.max(28, TRACK_H * (ch / sh));
-      vthumb.style.height = th + 'px';
-      const maxS = sh - ch;
-      vthumb.style.top = (maxS > 0 ? (viewport.scrollTop / maxS) * (TRACK_H - th) : 0) + 'px';
-    } else {
-      vthumb.style.height = TRACK_H + 'px';
-      vthumb.style.top = '0px';
+  function applyZoom(){
+    if(isDemo() && frame.contentDocument && frame.contentDocument.documentElement){
+      // 内置演示页（同源）：缩放应用到文档根元素 = 页面级缩放（同浏览器 Ctrl 缩放），
+      // 内容按新布局宽度重新排版，视觉始终铺满整个预览窗格
+      frame.style.zoom = '';   // 清除 iframe 级 zoom，避免双重缩放
+      frame.contentDocument.documentElement.style.zoom = zoom;
+    } else if(zoomSupported){
+      // 外部站点（跨域）：iframe 级 zoom，内容同样重新排版；缩放后内容小于窗口属浏览器真实行为
+      frame.style.zoom = zoom;
     }
   }
 
   function applySize(){
-    // 布局尺寸固定（供窗口滚动查看长内容）；缩放用 transform 实现视觉放大/缩小
-    frame.style.width  = BASE_W + 'px';
+    // 布局尺寸固定：iframe 完整渲染（高 = 窗口高 +300px 供原生滚动条滚动查看长内容）；
+    // 宽度让出右侧原生垂直滚动条宽度（约 16px），避免出现水平滚动条
+    frame.style.width  = (BASE_W - 16) + 'px';
     frame.style.height = (BASE_H + 300) + 'px';
-    frame.style.transform = 'scale(' + zoom + ')';
-    frame.style.transformOrigin = 'top left';
+    if(zoomSupported){
+      frame.style.transform = 'none';
+      applyZoom();
+    } else {
+      // 兜底（不支持 zoom 的浏览器）：退化为视觉等比缩放
+      frame.style.zoom = '';
+      frame.style.transform = 'scale(' + zoom + ')';
+      frame.style.transformOrigin = 'top left';
+    }
     zoomVal.textContent = Math.round(zoom * 100) + '%';
-    updateScrollbars();
   }
+  frame.addEventListener('load', applySize);
 
   zoomIn.onclick  = function(){ zoom = Math.min(4, +(zoom * 1.1).toFixed(4)); applySize(); };
   zoomOut.onclick = function(){ zoom = Math.max(0.2, +(zoom / 1.1).toFixed(4)); applySize(); };
-
-  viewport.addEventListener('scroll', updateScrollbars);
 
   // ===== 移动端适配：界面整体缩放铺满视口宽度 =====
   function fitStage(){
@@ -435,50 +411,20 @@
   window.addEventListener('resize', fitStage);
   fitStage();
 
-  // ===== 版本切换按钮 + 返回主页 + 说明文字 =====
-  homeBtn.addEventListener('click', function(){ location.href = 'index.html'; });
+  // ===== 版本切换按钮 + 说明文字 =====
   modeBtn.textContent = compact ? '← 返回 800×600' : '400×300 备用版';
   modeBtn.title = compact ? '返回主版本（800×600 窗口）' : '切换到备用版（400×300 窗口）';
+  homeBtn.addEventListener('click', function(){ location.href = 'index.html'; });
   modeBtn.addEventListener('click', function(){
     location.href = compact ? location.pathname : location.pathname + '?size=600';
   });
-  noteEl.innerHTML = '顶部栏固定为 ' + BASE_W + 'px（最左到最右的「刷新」按钮正好 ' + BASE_W + 'px）；预览窗口 ' + BASE_W + '×' + BASE_H + ' 紧贴左上角，其左侧为垂直滚动条、顶部为水平滚动条，可拖动滑块或滚轮滚动查看。被预览页面自身的滚动条已禁用，滚动只由本窗口承担；「+」「−」可缩放页面显示。部分网站通过 X-Frame-Options / CSP 禁止被嵌入，此类页面会显示为空白。';
+  noteEl.innerHTML = '顶部栏固定为 ' + BASE_W + 'px（最左到最右的「刷新」按钮正好 ' + BASE_W + 'px）；预览窗口 ' + BASE_W + '×' + BASE_H + ' 紧贴左上角，内容超出时由页面原生滚动条滚动查看（浏览器默认位置：右侧垂直、底部水平）。「+」「−」可缩放页面显示。部分网站通过 X-Frame-Options / CSP 禁止被嵌入，此类页面会显示为空白。';
 
-  // ===== 拖动自定义滚动条 =====
-  let drag = null;
-  function startDrag(e, axis){
-    e.preventDefault();
-    drag = {
-      axis: axis,
-      startX: e.clientX, startY: e.clientY,
-      startLeft: viewport.scrollLeft, startTop: viewport.scrollTop
-    };
-  }
-  vthumb.addEventListener('pointerdown', function(e){ startDrag(e, 'v'); });
-  hthumb.addEventListener('pointerdown', function(e){ startDrag(e, 'h'); });
-
-  document.addEventListener('pointermove', function(e){
-    if(!drag) return;
-    if(drag.axis === 'v'){
-      const th = parseFloat(vthumb.style.height) || 28;
-      const maxTrack = TRACK_H - th;
-      const maxScroll = viewport.scrollHeight - viewport.clientHeight;
-      const dy = e.clientY - drag.startY;
-      viewport.scrollTop = drag.startTop + (maxScroll > 0 ? (dy / maxTrack) * maxScroll : 0);
-    } else {
-      const tw = parseFloat(hthumb.style.width) || 28;
-      const maxTrack = TRACK_W - tw;
-      const maxScroll = viewport.scrollWidth - viewport.clientWidth;
-      const dx = e.clientX - drag.startX;
-      viewport.scrollLeft = drag.startLeft + (maxScroll > 0 ? (dx / maxTrack) * maxScroll : 0);
-    }
-    updateScrollbars();
-  });
-  document.addEventListener('pointerup', function(){ drag = null; });
-
-  applySize();
-  // 默认加载一个可被嵌入的示例页面
-  load('https://example.com');
+  // 默认加载内置响应式演示页（同源、宽度随视口伸缩，缩放任意比例均铺满预览窗格）
+  frame.srcdoc = DEMO;
+  winUrl.textContent = '内置响应式演示页';
+  winUrl.title = '内置响应式演示页（缩放任意比例铺满窗口）';
+  applySize();   // srcdoc 设置后再应用布局与缩放，避免内置页被误设 iframe 级 zoom
 })();
 </script>
 </body>
