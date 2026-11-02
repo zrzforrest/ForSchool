@@ -178,7 +178,7 @@
     } else {
       stage.style.transform = 'none';
       document.body.style.height = '';
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = 'auto';   // 桌面：视口较矮时允许原生滚动
     }
   }
   window.addEventListener('resize', fitStage);
