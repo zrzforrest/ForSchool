@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>固定窗口预览器</title>
+<title>固定窗口预览器 · ForSchool</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%235b8def'/%3E%3Crect x='16' y='18' width='32' height='28' rx='4' fill='white'/%3E%3Crect x='24' y='26' width='16' height='4' rx='2' fill='%235b8def'/%3E%3C/svg%3E">
 <style>
   :root{
@@ -16,461 +16,135 @@
     --muted:#98a0ad;
     --accent:#5b8def;
     --accent-strong:#4a7fe0;
-    --danger:#e06b6b;
-    /* 尺寸模式变量：主版 800×600，备用版 400×300（body.compact 覆盖） */
-    --tool-w:800px; --win-w:800px; --win-h:630px;
-    --view-w:800px; --view-h:600px;
-    --note-top:692px; --note-w:800px;
-    --track-w:786px; --track-h:586px;
   }
-  body.compact{
-    --tool-w:400px; --win-w:400px; --win-h:330px;
-    --view-w:400px; --view-h:300px;
-    --note-top:392px; --note-w:400px;
-    --track-w:386px; --track-h:286px;
-  }
-  /* 备用版顶栏较窄，隐藏“网址”标签以留出输入框宽度 */
-  body.compact #label{display:none;}
   *{box-sizing:border-box;margin:0;padding:0;}
-  html,body{height:100%;}
   body{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     background:var(--bg);
     color:var(--text);
     font-family:-apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
-    overflow:hidden;
+    padding:40px 20px;
   }
-  /* ===== 页面舞台：移动端整体缩放适配视口 ===== */
-  #stage{position:relative;transform-origin:top left;}
-  /* ===== 顶部输入栏（绝对坐标，贴左上角） ===== */
-  #topbar{
-    position:absolute;
-    top:0;left:0;
-    width:var(--tool-w);height:54px;
-    background:var(--surface);
-    border-bottom:1px solid var(--border);
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:0 14px;
-  }
-  #label{
-    font-size:13px;
-    color:var(--muted);
-    flex:none;
-    white-space:nowrap;
-  }
-  #url-input{
-    flex:1;
-    min-width:0;
-    height:32px;
-    padding:0 12px;
+  .wrap{width:100%;max-width:760px;}
+  .hero{text-align:center;margin-bottom:32px;}
+  .hero h1{font-size:28px;font-weight:700;letter-spacing:.5px;}
+  .hero .sub{
+    margin-top:10px;
     font-size:14px;
-    color:var(--text);
-    background:var(--bg);
-    border:1px solid var(--border);
-    border-radius:6px;
-    outline:none;
+    color:var(--muted);
   }
-  #url-input:focus{border-color:var(--accent);}
-  #url-input::placeholder{color:#5f6673;}
-  .btn{
-    flex:none;
-    height:32px;
-    padding:0 14px;
-    font-size:13px;
-    color:var(--text);
-    background:var(--panel);
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+  @media (max-width:560px){
+    .cards{grid-template-columns:1fr;}
+  }
+  .card{
+    background:var(--surface);
     border:1px solid var(--border);
-    border-radius:6px;
-    cursor:pointer;
-    display:inline-flex;
-    align-items:center;
+    border-radius:12px;
+    padding:22px 20px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    transition:border-color .15s, background .15s;
+  }
+  .card:hover{border-color:var(--border-strong);background:var(--panel);}
+  .card .size{
+    align-self:flex-start;
+    font-size:12px;
+    font-weight:600;
+    color:var(--accent);
+    background:rgba(91,141,239,.12);
+    border:1px solid rgba(91,141,239,.35);
+    border-radius:999px;
+    padding:3px 10px;
+  }
+  .card h2{font-size:18px;font-weight:600;}
+  .card ul{
+    list-style:none;
+    display:flex;
+    flex-direction:column;
     gap:6px;
   }
-  .btn:hover{border-color:var(--border-strong);background:#21242d;}
-  .btn-primary{
-    background:var(--accent);
-    border-color:var(--accent);
-    color:#fff;
-  }
-  .btn-primary:hover{background:var(--accent-strong);border-color:var(--accent-strong);}
-  /* ===== 预览窗口（800×600，贴左上角，绝对坐标） ===== */
-  #window{
-    position:absolute;
-    top:54px;left:0;
-    width:var(--win-w);height:var(--win-h);
-    background:var(--surface);
-    border:1px solid var(--border-strong);
-    border-radius:8px 8px 0 0;
-    box-shadow:0 8px 28px rgba(0,0,0,.45);
-    overflow:hidden;
-  }
-  #win-titlebar{
-    position:absolute;
-    top:0;left:0;
-    width:100%;height:30px;
-    background:var(--panel);
-    border-bottom:1px solid var(--border);
-    display:flex;
-    align-items:center;
-    gap:8px;
-    padding:0 10px;
-  }
-  #win-dots{display:flex;gap:5px;flex:none;}
-  .dot{width:9px;height:9px;border-radius:50%;flex:none;}
-  .dot-r{background:#e06b6b;}
-  .dot-y{background:#d9a13b;}
-  .dot-g{background:#5da95f;}
-  #win-url{
-    flex:1;min-width:0;
-    font-size:12px;
-    color:var(--muted);
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-  #win-refresh{
-    flex:none;
-    width:22px;height:22px;
-    background:transparent;
-    border:none;
-    color:var(--muted);
-    cursor:pointer;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:4px;
-  }
-  #win-refresh:hover{color:var(--text);background:var(--border);}
-  #zoom-group{flex:none;display:flex;align-items:center;gap:2px;}
-  .zoom-btn{
-    width:22px;height:22px;
-    background:transparent;
-    border:none;
-    color:var(--muted);
-    cursor:pointer;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:4px;
-    font-size:15px;line-height:1;
-  }
-  .zoom-btn:hover{color:var(--text);background:var(--border);}
-  #zoom-val{
-    min-width:42px;text-align:center;
-    font-size:12px;color:var(--muted);
-    font-variant-numeric:tabular-nums;
-  }
-  /* ===== 可滚动视口（替代原 iframe 直接定位） ===== */
-  #viewport{
-    position:absolute;
-    top:30px;left:0;
-    width:var(--view-w);height:var(--view-h);
-    overflow:auto;
-    scrollbar-width:none;          /* Firefox：隐藏原生滚动条 */
-  }
-  #viewport::-webkit-scrollbar{width:0;height:0;display:none;}
-  #frame{
-    position:absolute;
-    top:0;left:0;
-    width:var(--view-w);height:var(--view-h);
-    border:0;background:#fff;
-  }
-  /* ===== 自定义滚动条（垂直在左、水平在上，浮层式） ===== */
-  #corner{
-    position:absolute;
-    top:30px;left:0;
-    width:14px;height:14px;
-    background:var(--panel);
-    border-right:1px solid var(--border);
-    border-bottom:1px solid var(--border);
-    z-index:6;
-  }
-  #vscroll{
-    position:absolute;
-    top:44px;left:0;
-    width:14px;height:var(--track-h);
-    background:rgba(22,24,29,.55);
-    border-right:1px solid var(--border);
-    z-index:6;
-    transition:background .15s;
-  }
-  #vscroll:hover{background:rgba(43,48,60,.7);}
-  #v-thumb{
-    position:absolute;
-    left:2px;top:0;
-    width:10px;
-    background:var(--border-strong);
-    border-radius:5px;
-    cursor:pointer;
-  }
-  #vscroll:hover #v-thumb{background:#4b5366;}
-  #hscroll{
-    position:absolute;
-    top:30px;left:14px;
-    width:var(--track-w);height:14px;
-    background:rgba(22,24,29,.55);
-    border-bottom:1px solid var(--border);
-    z-index:6;
-    transition:background .15s;
-  }
-  #hscroll:hover{background:rgba(43,48,60,.7);}
-  #h-thumb{
-    position:absolute;
-    top:2px;left:0;
-    height:10px;
-    background:var(--border-strong);
-    border-radius:5px;
-    cursor:pointer;
-  }
-  #hscroll:hover #h-thumb{background:#4b5366;}
-  /* ===== 右下角说明（绝对坐标） ===== */
-  #note{
-    position:absolute;
-    top:var(--note-top);left:0;
-    width:var(--note-w);
-    padding:10px 14px;
-    font-size:12px;
+  .card li{
+    font-size:13px;
     line-height:1.6;
     color:var(--muted);
+    display:flex;
+    gap:8px;
+    align-items:flex-start;
   }
-  /* ===== Toast（绝对坐标，居中顶部） ===== */
-  #toast{
-    position:absolute;
-    top:64px;left:50%;
-    transform:translateX(-50%);
-    max-width:70%;
-    padding:8px 16px;
-    font-size:13px;
+  .card li::before{
+    content:"";
+    flex:none;
+    width:5px;height:5px;
+    margin-top:7px;
+    border-radius:50%;
+    background:var(--accent);
+  }
+  .enter{
+    margin-top:auto;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    height:38px;
+    font-size:14px;
     color:#fff;
-    background:var(--danger);
-    border-radius:6px;
-    opacity:0;
-    pointer-events:none;
-    transition:opacity .25s;
-    white-space:nowrap;
+    text-decoration:none;
+    background:var(--accent);
+    border-radius:8px;
+    transition:background .15s;
   }
-  #toast.show{opacity:1;}
+  .enter:hover{background:var(--accent-strong);}
+  .foot{
+    margin-top:28px;
+    text-align:center;
+    font-size:12px;
+    color:#5f6673;
+    line-height:1.8;
+  }
 </style>
 </head>
 <body>
-<div id="stage">
-<!-- ===== 顶部输入栏 ===== -->
-<div id="topbar">
-  <button id="mode-btn" class="btn" type="button" aria-label="切换版本"></button>
-  <span id="label">网址</span>
-  <input id="url-input" type="text" placeholder="https://example.com" spellcheck="false" autocomplete="off">
-  <button id="load-btn" class="btn btn-primary">加载</button>
-  <button id="refresh-btn" class="btn">刷新</button>
-</div>
-<!-- ===== 预览窗口 ===== -->
-<div id="window">
-  <div id="win-titlebar">
-    <div id="win-dots">
-      <span class="dot dot-r"></span>
-      <span class="dot dot-y"></span>
-      <span class="dot dot-g"></span>
-    </div>
-    <span id="win-url">尚未加载</span>
-    <div id="zoom-group">
-      <button id="zoom-out" class="zoom-btn" title="缩小" aria-label="缩小">−</button>
-      <span id="zoom-val">100%</span>
-      <button id="zoom-in" class="zoom-btn" title="放大" aria-label="放大">+</button>
-    </div>
-    <button id="win-refresh" title="重新加载" aria-label="重新加载">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36" /><path d="M21 3v6h-6" /></svg>
-    </button>
+<div class="wrap">
+  <header class="hero">
+    <h1>固定窗口预览器</h1>
+    <p class="sub">在固定尺寸窗口中预览任意网页 · 选择版本进入</p>
+  </header>
+  <div class="cards">
+    <section class="card">
+      <span class="size">800 × 600</span>
+      <h2>主版</h2>
+      <ul>
+        <li>800×600 大窗口，完整呈现页面布局</li>
+        <li>窗口左侧垂直、顶部水平滚动条</li>
+        <li>20%–400% 视觉缩放，一键加载任意网址</li>
+      </ul>
+      <a class="enter" href="previewer.html">进入 800×600 主版</a>
+    </section>
+    <section class="card">
+      <span class="size">400 × 300</span>
+      <h2>备用版</h2>
+      <ul>
+        <li>400×300 紧凑窗口，功能与主版一致</li>
+        <li>窗口左侧垂直、顶部水平滚动条</li>
+        <li>20%–400% 视觉缩放，一键加载任意网址</li>
+      </ul>
+      <a class="enter" href="previewer.html?size=600">进入 400×300 备用版</a>
+    </section>
   </div>
-  <!-- 可滚动视口：内容超出 800×600 时出现滚动条 -->
-  <div id="viewport">
-    <iframe id="frame" title="预览网页" scrolling="no"></iframe>
-  </div>
-  <!-- 左上角滚动条交界块 + 垂直（左）/ 水平（上）滚动条 -->
-  <div id="corner"></div>
-  <div id="vscroll"><div id="v-thumb"></div></div>
-  <div id="hscroll"><div id="h-thumb"></div></div>
-</div>
-<!-- ===== 说明 ===== -->
-<div id="note">
-  顶部栏固定为 800px（最左到最右的「刷新」按钮正好 800px）；预览窗口 800×600 紧贴左上角，其左侧为垂直滚动条、顶部为水平滚动条，可拖动滑块或滚轮滚动查看。页面以较大视口完整渲染后由窗口滚动条查看。由于外部跨域网站禁止在窗口外读取内容，页面内容若仍超出 iframe 高度会在页面内部滚动（受浏览器限制）。部分网站通过 X-Frame-Options / CSP 禁止被嵌入，此类页面会显示为空白。
-</div>
-<div id="toast"></div>
+  <footer class="foot">
+    默认示例为 example.com；部分网站通过 X-Frame-Options / CSP 禁止被嵌入，此类页面会显示为空白。
+  </footer>
 </div>
 <script>
-(function(){
-  const input    = document.getElementById('url-input');
-  const loadBtn  = document.getElementById('load-btn');
-  const refreshBtn = document.getElementById('refresh-btn');
-  const frame    = document.getElementById('frame');
-  const viewport = document.getElementById('viewport');
-  const winUrl   = document.getElementById('win-url');
-  const winRefresh = document.getElementById('win-refresh');
-  const toast    = document.getElementById('toast');
-  const zoomIn   = document.getElementById('zoom-in');
-  const zoomOut  = document.getElementById('zoom-out');
-  const zoomVal  = document.getElementById('zoom-val');
-  const vscroll  = document.getElementById('vscroll');
-  const vthumb   = document.getElementById('v-thumb');
-  const hscroll  = document.getElementById('hscroll');
-  const hthumb   = document.getElementById('h-thumb');
-  const modeBtn  = document.getElementById('mode-btn');
-  const noteEl   = document.getElementById('note');
-  const stage    = document.getElementById('stage');
-
-  let toastTimer = null;
-  function showToast(msg){
-    toast.textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function(){ toast.classList.remove('show'); }, 2400);
+  // 兼容旧入口：index.html?size=600 跳转到备用版预览器
+  if (new URLSearchParams(location.search).get('size') === '600') {
+    location.replace('previewer.html?size=600');
   }
-
-  function normalize(url){
-    url = url.trim();
-    if(!url) return '';
-    if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
-    return url;
-  }
-
-  function load(url){
-    let target = url || normalize(input.value);
-    if(!target){ showToast('请先输入网址'); return; }
-    if(!/^https?:\/\//i.test(target)) target = 'https://' + target;
-    frame.src = target;
-    winUrl.textContent = target;
-    winUrl.title = target;
-  }
-  function reload(){
-    if(frame.src){ load(frame.getAttribute('src')); }
-  }
-
-  loadBtn.onclick = function(){ load(); };
-  input.addEventListener('keydown', function(e){
-    if(e.key === 'Enter'){ load(); }
-  });
-  refreshBtn.onclick = reload;
-  winRefresh.onclick = reload;
-
-  // ===== 尺寸模式：主版 800×600；备用版 400×300（URL 带 ?size=600） =====
-  const compact = new URLSearchParams(location.search).get('size') === '600';
-  document.body.classList.toggle('compact', compact);
-  document.title = compact ? '固定窗口预览器（400×300 备用版）' : '固定窗口预览器';
-  const BASE_W = compact ? 400 : 800;
-  const BASE_H = compact ? 300 : 600;
-  const TRACK_W = compact ? 386 : 786;   // 水平滚动条轨道长度
-  const TRACK_H = compact ? 286 : 586;   // 垂直滚动条轨道长度
-  let zoom = 1;
-
-  function updateScrollbars(){
-    const sw = viewport.scrollWidth,  cw = viewport.clientWidth;
-    const sh = viewport.scrollHeight, ch = viewport.clientHeight;
-
-    // 水平（顶部滚动条）：始终显示；无溢出时滑块占满轨道
-    if(sw > cw){
-      const tw = Math.max(28, TRACK_W * (cw / sw));
-      hthumb.style.width = tw + 'px';
-      const maxS = sw - cw;
-      hthumb.style.left = (maxS > 0 ? (viewport.scrollLeft / maxS) * (TRACK_W - tw) : 0) + 'px';
-    } else {
-      hthumb.style.width = TRACK_W + 'px';
-      hthumb.style.left = '0px';
-    }
-
-    // 垂直（左侧滚动条）：始终显示；无溢出时滑块占满轨道
-    if(sh > ch){
-      const th = Math.max(28, TRACK_H * (ch / sh));
-      vthumb.style.height = th + 'px';
-      const maxS = sh - ch;
-      vthumb.style.top = (maxS > 0 ? (viewport.scrollTop / maxS) * (TRACK_H - th) : 0) + 'px';
-    } else {
-      vthumb.style.height = TRACK_H + 'px';
-      vthumb.style.top = '0px';
-    }
-  }
-
-  function applySize(){
-    // 布局尺寸固定（供窗口滚动查看长内容）；缩放用 transform 实现视觉放大/缩小
-    frame.style.width  = BASE_W + 'px';
-    frame.style.height = (BASE_H + 300) + 'px';
-    frame.style.transform = 'scale(' + zoom + ')';
-    frame.style.transformOrigin = 'top left';
-    zoomVal.textContent = Math.round(zoom * 100) + '%';
-    updateScrollbars();
-  }
-
-  zoomIn.onclick  = function(){ zoom = Math.min(4, +(zoom * 1.1).toFixed(4)); applySize(); };
-  zoomOut.onclick = function(){ zoom = Math.max(0.2, +(zoom / 1.1).toFixed(4)); applySize(); };
-
-  viewport.addEventListener('scroll', updateScrollbars);
-
-  // ===== 移动端适配：界面整体缩放铺满视口宽度 =====
-  function fitStage(){
-    const vw = document.documentElement.clientWidth;
-    const stageW = compact ? 400 : 800;
-    if(vw < stageW){
-      const s = vw / stageW;
-      const h = 54 + (compact ? 330 : 630) + 64;   // topbar + 窗口 + 说明 布局高
-      stage.style.transform = 'scale(' + s + ')';
-      stage.style.transformOrigin = 'top left';
-      stage.style.width = stageW + 'px';
-      stage.style.height = (h * s) + 'px';
-      document.body.style.height = (h * s) + 'px';
-      document.body.style.overflow = 'auto';
-    } else {
-      stage.style.transform = 'none';
-      stage.style.width = '';
-      stage.style.height = '';
-      document.body.style.height = '';
-      document.body.style.overflow = 'hidden';
-    }
-  }
-  window.addEventListener('resize', fitStage);
-  fitStage();
-
-  // ===== 版本切换按钮 + 说明文字 =====
-  modeBtn.textContent = compact ? '← 返回 800×600' : '400×300 备用版';
-  modeBtn.title = compact ? '返回主版本（800×600 窗口）' : '切换到备用版（400×300 窗口）';
-  modeBtn.addEventListener('click', function(){
-    location.href = compact ? location.pathname : location.pathname + '?size=600';
-  });
-  noteEl.innerHTML = '顶部栏固定为 ' + BASE_W + 'px（最左到最右的「刷新」按钮正好 ' + BASE_W + 'px）；预览窗口 ' + BASE_W + '×' + BASE_H + ' 紧贴左上角，其左侧为垂直滚动条、顶部为水平滚动条，可拖动滑块或滚轮滚动查看。被预览页面自身的滚动条已禁用，滚动只由本窗口承担；「+」「−」可缩放页面显示。部分网站通过 X-Frame-Options / CSP 禁止被嵌入，此类页面会显示为空白。';
-
-  // ===== 拖动自定义滚动条 =====
-  let drag = null;
-  function startDrag(e, axis){
-    e.preventDefault();
-    drag = {
-      axis: axis,
-      startX: e.clientX, startY: e.clientY,
-      startLeft: viewport.scrollLeft, startTop: viewport.scrollTop
-    };
-  }
-  vthumb.addEventListener('pointerdown', function(e){ startDrag(e, 'v'); });
-  hthumb.addEventListener('pointerdown', function(e){ startDrag(e, 'h'); });
-
-  document.addEventListener('pointermove', function(e){
-    if(!drag) return;
-    if(drag.axis === 'v'){
-      const th = parseFloat(vthumb.style.height) || 28;
-      const maxTrack = TRACK_H - th;
-      const maxScroll = viewport.scrollHeight - viewport.clientHeight;
-      const dy = e.clientY - drag.startY;
-      viewport.scrollTop = drag.startTop + (maxScroll > 0 ? (dy / maxTrack) * maxScroll : 0);
-    } else {
-      const tw = parseFloat(hthumb.style.width) || 28;
-      const maxTrack = TRACK_W - tw;
-      const maxScroll = viewport.scrollWidth - viewport.clientWidth;
-      const dx = e.clientX - drag.startX;
-      viewport.scrollLeft = drag.startLeft + (maxScroll > 0 ? (dx / maxTrack) * maxScroll : 0);
-    }
-    updateScrollbars();
-  });
-  document.addEventListener('pointerup', function(){ drag = null; });
-
-  applySize();
-  // 默认加载一个可被嵌入的示例页面
-  load('https://example.com');
-})();
 </script>
 </body>
 </html>
