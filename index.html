@@ -33,27 +33,28 @@
     background:var(--bg);
     transform-origin:top left;
   }
-  .hero{text-align:center;margin-bottom:18px;}
-  .hero h1{font-size:23px;font-weight:700;letter-spacing:.5px;}
-  .hero .sub{
-    margin-top:8px;
-    font-size:13px;
-    color:var(--muted);
-  }
-  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+  .hero{text-align:center;margin-bottom:14px;}
+  .hero h1{font-size:20px;font-weight:700;letter-spacing:.5px;}
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
   .card{
     background:var(--surface);
     border:1px solid var(--border);
     border-radius:8px;
-    padding:12px 12px;
+    padding:10px 12px;
     display:flex;
     flex-direction:column;
-    gap:7px;
+    gap:8px;
     transition:border-color .15s, background .15s;
   }
   .card:hover{border-color:var(--border-strong);background:var(--panel);}
+  .card-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+  }
   .card .size{
-    align-self:flex-start;
+    flex:none;
     font-size:10px;
     font-weight:600;
     color:var(--accent);
@@ -62,36 +63,13 @@
     border-radius:999px;
     padding:2px 7px;
   }
-  .card h2{font-size:14px;font-weight:600;}
-  .card ul{
-    list-style:none;
-    display:flex;
-    flex-direction:column;
-    gap:4px;
-  }
-  .card li{
-    font-size:11px;
-    line-height:1.5;
-    color:var(--muted);
-    display:flex;
-    gap:6px;
-    align-items:flex-start;
-  }
-  .card li::before{
-    content:"";
-    flex:none;
-    width:3px;height:3px;
-    margin-top:6px;
-    border-radius:50%;
-    background:var(--accent);
-  }
+  .card h2{font-size:13px;font-weight:600;}
   .enter{
-    margin-top:auto;
     display:inline-flex;
     align-items:center;
     justify-content:center;
     gap:6px;
-    height:26px;
+    height:24px;
     font-size:12px;
     color:#fff;
     text-decoration:none;
@@ -100,66 +78,43 @@
     transition:background .15s;
   }
   .enter:hover{background:var(--accent-strong);}
-  .foot{
-    margin-top:14px;
-    text-align:center;
-    font-size:11px;
-    color:#5f6673;
-    line-height:1.8;
-  }
 </style>
 </head>
 <body>
 <div id="stage">
   <header class="hero">
     <h1>固定窗口预览器 · ForSchool</h1>
-    <p class="sub">固定尺寸窗口预览网页 · 2048 小游戏 · 选择进入</p>
   </header>
   <div class="cards">
     <section class="card">
-      <span class="size">小游戏</span>
-      <h2>2048</h2>
-      <ul>
-        <li>经典 4×4 合并玩法，向 2048 冲刺</li>
-        <li>四个方向按钮操作，触屏故障也不怕</li>
-        <li>键盘方向键同样可用</li>
-      </ul>
+      <div class="card-head">
+        <h2>2048</h2>
+        <span class="size">小游戏</span>
+      </div>
       <a class="enter" href="2048.html">开始游戏</a>
     </section>
     <section class="card">
-      <span class="size">教程</span>
-      <h2>2048 教程</h2>
-      <ul>
-        <li>规则速览与得分说明，一分钟上手</li>
-        <li>角落策略、阶梯序列等进阶技巧</li>
-        <li>常见误区避坑，冲 2048 更快</li>
-      </ul>
+      <div class="card-head">
+        <h2>2048 教程</h2>
+        <span class="size">教程</span>
+      </div>
       <a class="enter" href="2048-guide.html">查看教程</a>
     </section>
     <section class="card">
-      <span class="size">400 × 300</span>
-      <h2>备用版</h2>
-      <ul>
-        <li>400×300 紧凑窗口，功能与主版一致</li>
-        <li>内容超出由页面原生滚动条滚动</li>
-        <li>浏览器式缩放，一键加载任意网址</li>
-      </ul>
+      <div class="card-head">
+        <h2>备用版</h2>
+        <span class="size">400 × 300</span>
+      </div>
       <a class="enter" href="previewer.html?size=600">进入 400×300 备用版</a>
     </section>
     <section class="card">
-      <span class="size">800 × 600</span>
-      <h2>主版</h2>
-      <ul>
-        <li>800×600 大窗口，完整呈现页面布局</li>
-        <li>内容超出由页面原生滚动条滚动</li>
-        <li>浏览器式缩放，一键加载任意网址</li>
-      </ul>
+      <div class="card-head">
+        <h2>主版</h2>
+        <span class="size">800 × 600</span>
+      </div>
       <a class="enter" href="previewer.html">进入 800×600 主版</a>
     </section>
   </div>
-  <footer class="foot">
-    默认示例为内置响应式演示页；部分网站通过 X-Frame-Options / CSP 禁止被嵌入，此类页面会显示为空白。
-  </footer>
 </div>
 <script>
   // 兼容旧入口：index.html?size=600 跳转到备用版预览器
