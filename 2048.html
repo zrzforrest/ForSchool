@@ -167,6 +167,60 @@
     cursor:pointer;
   }
   #ov-restart:hover{background:var(--accent-strong);}
+  #ov-replay{
+    height:34px;
+    padding:0 16px;
+    font-size:14px;
+    color:var(--text);
+    background:transparent;
+    border:1px solid var(--border-strong);
+    border-radius:8px;
+    cursor:pointer;
+  }
+  #ov-replay:hover{background:var(--panel);border-color:var(--accent);}
+  /* ===== 回放条（覆盖棋盘，本局结束后查看） ===== */
+  #replaybar{
+    position:absolute;
+    top:56px;left:12px;
+    width:306px;height:306px;
+    background:rgba(13,15,19,.68);
+    border-radius:8px;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    z-index:10;
+  }
+  #replaybar.show{display:flex;}
+  #rp-status{font-size:15px;font-weight:700;letter-spacing:.5px;}
+  #rp-step{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}
+  #rp-dir{font-size:13px;color:#d9a13b;}
+  #rp-controls{display:flex;gap:8px;}
+  #rp-controls button{
+    height:32px;
+    padding:0 12px;
+    font-size:13px;
+    color:var(--text);
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:7px;
+    cursor:pointer;
+  }
+  #rp-controls button:hover{border-color:var(--border-strong);background:#21242d;}
+  #rp-controls button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  #rp-controls button.primary:hover{background:var(--accent-strong);}
+  #rp-exit{
+    height:28px;
+    padding:0 14px;
+    font-size:12px;
+    color:var(--muted);
+    background:transparent;
+    border:1px solid var(--border);
+    border-radius:7px;
+    cursor:pointer;
+  }
+  #rp-exit:hover{color:var(--text);border-color:var(--border-strong);}
 </style>
 </head>
 <body>
@@ -195,6 +249,18 @@
     <div id="ov-title"></div>
     <div id="ov-sub"></div>
     <button id="ov-restart" type="button">再来一局</button>
+    <button id="ov-replay" type="button">回放本局</button>
+  </div>
+  <div id="replaybar">
+    <div id="rp-status">回放本局</div>
+    <div id="rp-step">第 1 / 1 步</div>
+    <div id="rp-dir">开局</div>
+    <div id="rp-controls">
+      <button id="rp-prev" type="button">◀ 上一步</button>
+      <button id="rp-play" class="primary" type="button">播放</button>
+      <button id="rp-next" type="button">下一步 ▶</button>
+    </div>
+    <button id="rp-exit" type="button">退出回放</button>
   </div>
 </div>
 <script>
@@ -217,8 +283,15 @@
   const overlay  = document.getElementById('overlay');
   const ovTitle  = document.getElementById('ov-title');
   const ovSub    = document.getElementById('ov-sub');
+  const replaybar = document.getElementById('replaybar');
+  const rpStep    = document.getElementById('rp-step');
+  const rpDir     = document.getElementById('rp-dir');
+  const rpPlay    = document.getElementById('rp-play');
 
   let grid = [], score = 0, won = false, over = false;
+  // ===== 本局回放：记录每一步（方向 + 棋盘快照 + 分数） =====
+  let history = [], replaying = false, replayIdx = 0, playTimer = null;
+  const DIR_LABEL = { up:'▲', down:'▼', left:'◀', right:'▶' };
 
   function emptyCells(){
     const a = [];
@@ -251,7 +324,7 @@
   }
 
   function move(dir){
-    if(over) return;
+    if(over || replaying) return;
     const before = grid.join(',');
     if(dir === 'left' || dir === 'right'){
       for(let r = 0; r < SIZE; r++){
@@ -273,6 +346,7 @@
     }
     if(grid.join(',') === before) return;   // 无变化则不生成新方块
     addTile();
+    history.push({ dir: dir, grid: grid.slice(), score: score });
     render();
     check();
   }
@@ -315,14 +389,67 @@
     showOverlay('游戏结束', '最终分数 ' + score);
   }
 
+  // ===== 回放控制 =====
+  function applyReplay(i){
+    replayIdx = i;
+    const s = history[i];
+    grid = s.grid.slice();
+    score = s.score;
+    render();
+    rpStep.textContent = '第 ' + (i + 1) + ' / ' + history.length + ' 步';
+    rpDir.textContent = i === 0 ? '开局' : '本步方向 ' + (DIR_LABEL[s.dir] || '');
+    if(i >= history.length - 1) stopPlay();
+  }
+  function stopPlay(){
+    if(playTimer){ clearInterval(playTimer); playTimer = null; }
+    rpPlay.textContent = '播放';
+  }
+  function startPlay(){
+    if(playTimer) return;
+    if(replayIdx >= history.length - 1) applyReplay(0);
+    playTimer = setInterval(function(){
+      if(replayIdx < history.length - 1){
+        applyReplay(replayIdx + 1);
+      } else {
+        stopPlay();
+      }
+    }, 350);
+    rpPlay.textContent = '暂停';
+  }
+  function openReplay(){
+    stopPlay();
+    overlay.classList.remove('show');
+    replaying = true;
+    replaybar.classList.add('show');
+    applyReplay(0);
+  }
+  function closeReplay(){
+    stopPlay();
+    replaying = false;
+    replaybar.classList.remove('show');
+    if(over){
+      ovTitle.textContent = '游戏结束';
+      ovSub.textContent = '最终分数 ' + score;
+      overlay.classList.add('show');
+    } else if(won){
+      ovTitle.textContent = '达成 2048！';
+      ovSub.textContent = '可以继续挑战更高分数';
+      overlay.classList.add('show');
+    }
+  }
+
   function newGame(){
     grid = new Array(SIZE * SIZE).fill(0);
     score = 0;
     won = false;
     over = false;
     overlay.classList.remove('show');
+    stopPlay();
+    replaying = false;
+    replaybar.classList.remove('show');
     addTile();
     addTile();
+    history = [{ dir: null, grid: grid.slice(), score: 0 }];
     render();
   }
 
@@ -343,6 +470,17 @@
 
   document.getElementById('restart').onclick = newGame;
   document.getElementById('ov-restart').onclick = newGame;
+  document.getElementById('ov-replay').onclick = openReplay;
+  document.getElementById('rp-prev').onclick = function(){
+    stopPlay();
+    if(replayIdx > 0) applyReplay(replayIdx - 1);
+  };
+  document.getElementById('rp-next').onclick = function(){
+    stopPlay();
+    if(replayIdx < history.length - 1) applyReplay(replayIdx + 1);
+  };
+  rpPlay.onclick = function(){ playTimer ? stopPlay() : startPlay(); };
+  document.getElementById('rp-exit').onclick = closeReplay;
   document.getElementById('home-btn').onclick = function(){ location.href = 'index.html'; };
 
   // ===== 窄视口整体缩放适配（保险：固定 500×375 左上角布局） =====
