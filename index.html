@@ -19,17 +19,21 @@
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{
-    min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
     background:var(--bg);
     color:var(--text);
     font-family:-apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
-    padding:40px 20px;
+    overflow:hidden;
   }
-  .wrap{width:100%;max-width:760px;}
-  .hero{text-align:center;margin-bottom:32px;}
+  /* ===== 主页舞台：固定 760px 宽，贴左上角；窄视口整体缩放 ===== */
+  #stage{
+    position:absolute;
+    top:0;left:0;
+    width:760px;
+    padding:36px 24px 20px;
+    background:var(--bg);
+    transform-origin:top left;
+  }
+  .hero{text-align:center;margin-bottom:24px;}
   .hero h1{font-size:28px;font-weight:700;letter-spacing:.5px;}
   .hero .sub{
     margin-top:10px;
@@ -37,9 +41,6 @@
     color:var(--muted);
   }
   .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
-  @media (max-width:640px){
-    .cards{grid-template-columns:1fr;}
-  }
   .card{
     background:var(--surface);
     border:1px solid var(--border);
@@ -100,7 +101,7 @@
   }
   .enter:hover{background:var(--accent-strong);}
   .foot{
-    margin-top:28px;
+    margin-top:22px;
     text-align:center;
     font-size:12px;
     color:#5f6673;
@@ -109,7 +110,7 @@
 </style>
 </head>
 <body>
-<div class="wrap">
+<div id="stage">
   <header class="hero">
     <h1>固定窗口预览器</h1>
     <p class="sub">在固定尺寸窗口中预览任意网页 · 选择版本进入</p>
@@ -155,6 +156,23 @@
   if (new URLSearchParams(location.search).get('size') === '600') {
     location.replace('previewer.html?size=600');
   }
+  // ===== 窄视口整体缩放适配（主页固定 760px 宽，贴左上角） =====
+  var stage = document.getElementById('stage');
+  function fitStage(){
+    var vw = document.documentElement.clientWidth;
+    if(vw < 760){
+      var s = vw / 760;
+      stage.style.transform = 'scale(' + s + ')';
+      document.body.style.height = (stage.offsetHeight * s) + 'px';
+      document.body.style.overflow = 'auto';
+    } else {
+      stage.style.transform = 'none';
+      document.body.style.height = '';
+      document.body.style.overflow = 'hidden';
+    }
+  }
+  window.addEventListener('resize', fitStage);
+  fitStage();
 </script>
 </body>
 </html>
