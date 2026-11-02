@@ -183,6 +183,41 @@
   .pad-grid .key:nth-child(2){grid-column:1;grid-row:2;}
   .pad-grid .key:nth-child(3){grid-column:2;grid-row:2;}
   .pad-grid .key:nth-child(4){grid-column:3;grid-row:2;}
+  /* ===== 示意图：4×4 棋盘（2048 原色） ===== */
+  .demo-board{
+    display:grid;
+    grid-template-columns:repeat(4,44px);
+    gap:4px;
+    margin:10px 0 2px;
+  }
+  .demo-board .t{
+    width:44px;height:44px;
+    border-radius:6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+    font-weight:700;
+  }
+  .t-2{background:#eee4da;color:#776e65;}
+  .t-4{background:#ede0c8;color:#776e65;}
+  .t-8{background:#f2b179;color:#f9f6f2;}
+  .t-16{background:#f59563;color:#f9f6f2;}
+  .t-32{background:#f67c5f;color:#f9f6f2;}
+  .t-64{background:#f65e3b;color:#f9f6f2;}
+  .t-128{background:#edcf72;color:#f9f6f2;}
+  .t-256{background:#edcc61;color:#f9f6f2;}
+  .t-512{background:#edc850;color:#f9f6f2;}
+  .t-1024{background:#edc53f;color:#f9f6f2;}
+  .t-empty{background:rgba(255,255,255,.06);}
+  .t-base{outline:2px solid var(--gold);}
+  .t-dead{background:rgba(224,107,107,.85);color:#fff;}
+  .fig-cap{
+    font-size:11px;
+    color:var(--muted);
+    margin:4px 0 10px;
+    line-height:1.6;
+  }
   .foot{
     margin-top:4px;
     text-align:center;
@@ -259,6 +294,82 @@
       <li><b>只盯最大数</b>：忽略底下的 2、4，等发现时它们已经卡在中间动不了。</li>
       <li><b>看到能合并就立刻合</b>：有时不合并反而更好——保持序列整齐，等机会一次合成更大的数。</li>
       <li><b>被 4 打乱节奏</b>：新 4 不算坏消息，提前在序列里给它留位就好。</li>
+    </ul>
+  </section>
+
+  <section class="sec tips">
+    <h2><span class="no">6</span>深入 · 角落基地怎么守</h2>
+    <p>选好基地角（推荐右下角）后，把它当成"银行金库"来守：</p>
+    <ul>
+      <li><b>主方向只有两个</b>：基地在右下角 → 平时只按 ▼ 和 ▶；基地在左下角 → 只按 ▼ 和 ◀。其余两个方向是"救急方向"，一局里使用次数应屈指可数。</li>
+      <li><b>基地角附近的数字要成阶梯</b>：最大数旁边要能一路合并上去（64 旁边是 32，32 旁边是 16…），这样新方块出现时通道是通的。</li>
+      <li><b>最怕新方块落在基地角</b>：一个 2 或 4 正好出现在最大数旁，会堵住整条合并链。下图就是典型的"坏局"——右下角基地被一个 2 占据，128 旁边没有可合并的 128：</li>
+    </ul>
+    <div class="demo-board">
+      <span class="t t-2">2</span><span class="t t-4">4</span><span class="t t-8">8</span><span class="t t-16">16</span>
+      <span class="t t-4">4</span><span class="t t-8">8</span><span class="t t-16">16</span><span class="t t-32">32</span>
+      <span class="t t-8">8</span><span class="t t-16">16</span><span class="t t-32">32</span><span class="t t-64">64</span>
+      <span class="t t-32">32</span><span class="t t-64">64</span><span class="t t-128">128</span><span class="t t-2 t-base">2</span>
+    </div>
+    <p class="fig-cap">▲ 右下角基地被新出现的 2 占据（金框）。此时 128 无论向左还是向上都接不上合并链，必须先想办法把这个 2 移走。</p>
+    <ul>
+      <li><b>遇到坏局别慌</b>：朝能推动 2 的方向滑几步（通常用辅助方向把整行/列推开），把 2 从基地角挪出去，再让大数回到角落。</li>
+    </ul>
+  </section>
+
+  <section class="sec tips">
+    <h2><span class="no">7</span>深入 · 之字形递减链</h2>
+    <p>高手与新手的最大区别：新手到处散落大数，高手把大数排成一条"蛇形递减链"，每行每列都像阶梯：</p>
+    <div class="demo-board">
+      <span class="t t-2">2</span><span class="t t-4">4</span><span class="t t-8">8</span><span class="t t-16">16</span>
+      <span class="t t-4">4</span><span class="t t-8">8</span><span class="t t-16">16</span><span class="t t-32">32</span>
+      <span class="t t-8">8</span><span class="t t-16">16</span><span class="t t-32">32</span><span class="t t-64">64</span>
+      <span class="t t-16">16</span><span class="t t-32">32</span><span class="t t-64">64</span><span class="t t-128 t-base">128</span>
+    </div>
+    <p class="fig-cap">▲ 理想布局：右下角 128 为基地，向左、向上数字依次递减成链。按 ▼ 时每列 16+16→32…，按 ▶ 时每行 16+16→32…，随时都能合并，越合越大。</p>
+    <ul>
+      <li><b>为什么有效</b>：链上的相邻数字"等差相接"，主方向的每一次滑动都会触发一串合并，而不是单点合并。</li>
+      <li><b>怎么保持</b>：每次滑动前看一眼基地那行/列——链断了就先补链，再做其他事。</li>
+      <li><b>链会自己移动</b>：按 ▼ 时链整体下移并合并；按 ▶ 时整行右移。始终保持"最大数贴角落、向两侧递减"的形态即可。</li>
+    </ul>
+  </section>
+
+  <section class="sec tips">
+    <h2><span class="no">8</span>深入 · 什么时候该"逆向"滑</h2>
+    <p>一直按主方向，棋盘会越堆越满。适时的逆向滑动是高手的分水岭：</p>
+    <ul>
+      <li><b>堆满后"推出去再收回来"</b>：比如基地在右下角，当你按 ▼ 太多、上面三行挤满了小数字，可以按一次 ◀ 把整片往左推，让右侧空出一列，再按 ▶ 收回——注意收回前先确认链还整齐。</li>
+      <li><b>逆向要"借道"</b>：逆向滑动的目的不是反着玩，而是把方块推离基地侧、腾出空位，紧接着马上回到主方向。</li>
+      <li><b>一进一出算一次</b>：◀ 之后紧跟 ▶（或 ▲ 之后紧跟 ▼），不要逆向连按两次——连按两次等于主动把基地角让出去。</li>
+      <li><b>最高层的逆向最危险</b>：基地行/列所在的逆向（如右下基地时的 ▲ 或 ◀ 之一）一旦用了，大数离开角落，必须在一两步内设法回位，否则整盘开始失控。</li>
+    </ul>
+  </section>
+
+  <section class="sec tips">
+    <h2><span class="no">9</span>深入 · 空间紧张时的救局</h2>
+    <ul>
+      <li><b>先找"能合并的一步"再动手</b>：棋盘只剩两三格时，把四个方向在心里过一遍，选那个会产生合并的方向——没有合并的方向只会白占一步、还可能生成新方块堵路。</li>
+      <li><b>大数被堵时的标准动作</b>：比如基地角的 2 卡住了 128，向"能推动 2 且不破坏主链"的方向滑（通常沿基地行朝外推），把 2 从角落挪走，然后回位。</li>
+      <li><b>留"两格呼吸空间"</b>：好局任何时候都至少留两格空位，不要贪心把盘面填满——填满 = 离死局不远。</li>
+      <li><b>终极手段：大数搬家</b>：实在没路时，可以用逆向把最大数临时移出角落，用底行合并一次大的，再想办法回角落。风险高，只在局面接近卡死时用。</li>
+      <li><b>认输标准</b>：如果最大数旁边 2 格都被小数字堵死、且没有任何可合并的组合，这局基本没救了——直接重新开局，比硬耗更高效。</li>
+    </ul>
+  </section>
+
+  <section class="sec tips">
+    <h2><span class="no">10</span>失败局复盘：你为什么卡死</h2>
+    <p>绝大多数卡死局长这样——16 格全满、且相邻格子没有任何相等的数字：</p>
+    <div class="demo-board">
+      <span class="t t-2">2</span><span class="t t-4">4</span><span class="t t-2">2</span><span class="t t-4">4</span>
+      <span class="t t-4">4</span><span class="t t-2">2</span><span class="t t-4">4</span><span class="t t-2">2</span>
+      <span class="t t-2">2</span><span class="t t-4">4</span><span class="t t-2">2</span><span class="t t-4">4</span>
+      <span class="t t-4 t-dead">4</span><span class="t t-2 t-dead">2</span><span class="t t-4 t-dead">4</span><span class="t t-2 t-dead">2</span>
+    </div>
+    <p class="fig-cap">▲ 全满且相邻无可合并（红块示意最后一步）——此时任何方向滑动都不会产生变化，游戏结束。</p>
+    <ul>
+      <li><b>它怎么来的</b>：几乎都是"乱滑"的后果——四个方向轮流点、看到能合并就立刻合、小数字不清理，最后棋盘被小数字均匀填死。</li>
+      <li><b>复盘习惯</b>：死局后先别急着重开，回看刚才最后十步——是不是用了逆向？是不是把链弄断了？记住教训，下一局就是进步。</li>
+      <li><b>预防清单</b>：① 基地角永远是大数；② 保持递减链；③ 留两格空位；④ 逆向一进一出；⑤ 慢下来，每步想两秒。</li>
     </ul>
   </section>
 
