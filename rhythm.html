@@ -81,6 +81,7 @@
     top:44px;left:0;
     width:500px;height:331px;
     background:#0a0c10;
+    touch-action:none;
   }
   /* ===== 开始遮罩 ===== */
   #overlay{
@@ -149,6 +150,7 @@
       <span><kbd>F</kbd>轨2</span>
       <span><kbd>J</kbd>轨3</span>
       <span><kbd>K</kbd>轨4</span>
+      <span style="margin-left:6px;color:var(--muted);">或直接点击轨道</span>
     </div>
   </div>
 </div>
@@ -173,7 +175,7 @@ const W = 500, H = 331;                 // canvas 尺寸
 const LANES = 4;
 const LANE_W = W / LANES;               // 每条轨道宽 125
 const HIT_LINE_Y = H - 18;             // 判定线 y（距 canvas 顶）
-const SPEED = 280;                     // 下落速度 px/s（Lead Time=0 时可视速度）
+const SPEED = 500;                     // 下落速度 px/s
 const NOTE_H = 14, NOTE_W = LANE_W - 14;
 
 // 判定窗口（毫秒）
@@ -422,6 +424,40 @@ window.addEventListener('keyup', (e)=>{
   const lane = KEY_MAP[e.code];
   if(lane !== undefined) state.pressed[lane] = false;
 });
+
+// 鼠标/触屏点击轨道
+function laneFromX(clientX){
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const x = (clientX - rect.left) * scaleX;
+  return Math.floor(x / LANE_W);
+}
+canvas.addEventListener('mousedown', (e)=>{
+  const lane = laneFromX(e.clientX);
+  if(lane < 0 || lane > 3) return;
+  state.pressed[lane] = true;
+  tryHitLane(lane);
+});
+canvas.addEventListener('mouseup', (e)=>{
+  const lane = laneFromX(e.clientX);
+  if(lane >= 0 && lane <= 3) state.pressed[lane] = false;
+});
+canvas.addEventListener('touchstart', (e)=>{
+  e.preventDefault();
+  for(const t of e.touches){
+    const lane = laneFromX(t.clientX);
+    if(lane < 0 || lane > 3) continue;
+    state.pressed[lane] = true;
+    tryHitLane(lane);
+  }
+}, { passive:false });
+canvas.addEventListener('touchend', (e)=>{
+  e.preventDefault();
+  for(const t of e.changedTouches){
+    const lane = laneFromX(t.clientX);
+    if(lane >= 0 && lane <= 3) state.pressed[lane] = false;
+  }
+}, { passive:false });
 
 // ---------- 开始 / 结束 ----------
 function startGame(){
