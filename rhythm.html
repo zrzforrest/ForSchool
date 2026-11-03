@@ -126,6 +126,8 @@
   <div id="topbar">
     <a id="home-btn" href="index.html">← 主页</a>
     <div id="title">音游游玩器</div>
+    <button id="music-btn" style="height:26px;padding:0 10px;font-size:12px;color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:6px;cursor:pointer;">音乐</button>
+    <input type="file" id="audio-file" accept="audio/*" style="display:none">
     <div id="stats">
       <div class="item"><span class="label">分数</span><span class="val" id="score-val">0000000</span></div>
       <div class="item"><span class="label">连击</span><span class="val" id="combo-val">0</span></div>
@@ -210,6 +212,7 @@ const state = {
   hitAnim: [],          // 按键闪光 {lane, t}
   judgmentPopup: null,   // {text, color, t}
   finished: false,
+  audioStartTime: 0,
 };
 
 // ---------- DOM ----------
@@ -220,12 +223,30 @@ const startBtn = document.getElementById('start-btn');
 const scoreEl = document.getElementById('score-val');
 const comboEl = document.getElementById('combo-val');
 const accEl = document.getElementById('acc-val');
+const musicBtn = document.getElementById('music-btn');
+const audioFile = document.getElementById('audio-file');
+
+// ---------- 音频 ----------
+let audioCtx = null, audioBuffer = null, audioSource = null;
+musicBtn.addEventListener('click', ()=> audioFile.click());
+audioFile.addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if(audioCtx.state === 'suspended') await audioCtx.resume();
+  audioBuffer = await audioCtx.decodeAudioData(await file.arrayBuffer());
+  musicBtn.textContent = file.name.length > 8 ? file.name.slice(0,8)+'…' : file.name;
+});
 
 // ---------- 工具 ----------
 function nowSec(){ return performance.now() / 1000; }
 
 function currentTime(){
   if(!state.running) return 0;
+  if(audioBuffer && audioCtx){
+    // 音频时间：从开始播放算起
+    return audioCtx.currentTime - state.audioStartTime - chart.offset;
+  }
   return (nowSec() - state.startTime) - chart.offset;
 }
 
@@ -322,6 +343,16 @@ function startGame(){
   state.counts = { perfect:0, great:0, good:0, miss:0 };
   state.hitAnim = []; state.judgmentPopup = null;
   overlay.style.display = 'none';
+  // 启动音频
+  if(audioBuffer && audioCtx){
+    if(audioSource){ try{ audioSource.stop(); }catch(e){} }
+    audioSource = audioCtx.createBufferSource();
+    audioSource.buffer = audioBuffer;
+    audioSource.connect(audioCtx.destination);
+    audioCtx.resume();
+    audioSource.start(0, chart.offset);
+    state.audioStartTime = audioCtx.currentTime - chart.offset;
+  }
   recomputeStats();
 }
 startBtn.addEventListener('click', startGame);
