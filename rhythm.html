@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>音游游玩器 · ForSchool</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d0f13'/%3E%3Ccircle cx='22' cy='40' r='6' fill='%235b8def'/%3E%3Crect x='26' y='18' width='4' height='22' fill='%235b8def'/%3E%3Crect x='26' y='18' width='16' height='4' fill='%235b8def'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0d0f13;
+    --surface:#16181d;
+    --panel:#1b1e25;
+    --border:#2a2e39;
+    --border-strong:#363b49;
+    --text:#e8eaee;
+    --muted:#98a0ad;
+    --accent:#5b8def;
+    --accent-strong:#4a7fe0;
+    --perfect:#7ee0a3;
+    --great:#5b8def;
+    --good:#d9a13b;
+    --miss:#e06b6b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    overflow:hidden;
+  }
+  /* ===== 舞台：固定 500×375，贴左上角；窄视口整体缩放 ===== */
+  #stage{
+    position:absolute;
+    top:0;left:0;
+    width:500px;height:375px;
+    background:var(--bg);
+    transform-origin:top left;
+    overflow:hidden;
+  }
+  /* ===== 顶栏 ===== */
+  #topbar{
+    position:absolute;
+    top:0;left:0;
+    width:500px;height:44px;
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:0 12px;
+    z-index:5;
+  }
+  #home-btn{
+    flex:none;
+    height:30px;padding:0 10px;
+    font-size:13px;color:var(--text);
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+    cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;
+    text-decoration:none;
+  }
+  #home-btn:hover{border-color:var(--border-strong);background:#21242d;}
+  #title{font-size:15px;font-weight:700;letter-spacing:.5px;flex:none;}
+  #stats{
+    margin-left:auto;
+    display:flex;align-items:baseline;gap:10px;
+    font-variant-numeric:tabular-nums;
+  }
+  #stats .item{display:flex;flex-direction:column;align-items:flex-end;line-height:1.1;}
+  #stats .label{font-size:10px;color:var(--muted);}
+  #stats .val{font-size:13px;font-weight:700;}
+  #combo-val{color:var(--accent);}
+  #acc-val{color:var(--text);}
+  #score-val{color:var(--perfect);}
+  /* ===== 游戏画布 ===== */
+  #game{
+    position:absolute;
+    top:44px;left:0;
+    width:500px;height:331px;
+    background:#0a0c10;
+  }
+  /* ===== 开始遮罩 ===== */
+  #overlay{
+    position:absolute;
+    top:44px;left:0;
+    width:500px;height:331px;
+    background:rgba(13,15,19,.85);
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    gap:14px;z-index:10;
+  }
+  #overlay h2{font-size:18px;font-weight:700;}
+  #overlay p{font-size:12px;color:var(--muted);max-width:380px;text-align:center;line-height:1.6;}
+  #start-btn{
+    height:34px;padding:0 22px;
+    font-size:14px;font-weight:600;
+    color:#fff;background:var(--accent);
+    border:1px solid var(--accent);
+    border-radius:6px;cursor:pointer;
+  }
+  #start-btn:hover{background:var(--accent-strong);border-color:var(--accent-strong);}
+  #key-hint{
+    display:flex;gap:18px;margin-top:4px;
+    font-size:11px;color:var(--muted);
+  }
+  #key-hint span{display:inline-flex;flex-direction:column;align-items:center;gap:3px;}
+  #key-hint kbd{
+    display:inline-block;
+    min-width:26px;height:24px;
+    padding:0 6px;
+    font-family:inherit;font-size:12px;font-weight:700;
+    color:var(--text);
+    background:var(--panel);
+    border:1px solid var(--border-strong);
+    border-bottom-width:2px;
+    border-radius:5px;
+    line-height:22px;text-align:center;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="topbar">
+    <a id="home-btn" href="index.html">← 主页</a>
+    <div id="title">音游游玩器</div>
+    <div id="stats">
+      <div class="item"><span class="label">分数</span><span class="val" id="score-val">0000000</span></div>
+      <div class="item"><span class="label">连击</span><span class="val" id="combo-val">0</span></div>
+      <div class="item"><span class="label">准确率</span><span class="val" id="acc-val">100.00%</span></div>
+    </div>
+  </div>
+  <canvas id="game" width="500" height="331"></canvas>
+  <div id="overlay">
+    <h2>4K 下落式音游</h2>
+    <p>当前为空白谱面（游玩器骨架）。按 D / F / J / K 击打判定线上的音符。<br>判定窗口：Perfect ±46ms · Great ±92ms · Good ±138ms · Miss &gt;160ms。</p>
+    <button id="start-btn">开始</button>
+    <div id="key-hint">
+      <span><kbd>D</kbd>轨1</span>
+      <span><kbd>F</kbd>轨2</span>
+      <span><kbd>J</kbd>轨3</span>
+      <span><kbd>K</kbd>轨4</span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+ *  音游游玩器（4K 下落式）
+ *  - 舞台固定 500×375，窄视口整体缩放
+ *  - Lead Time = 0：note.t 即为到达判定线的时间
+ *  - 当前谱面为空谱，引擎已就绪，后续向 chart.notes 填音符即可
+ * ============================================================ */
+
+// ---------- 谱面数据（先空着，后续填谱） ----------
+const chart = {
+  offset: 0,          // 歌曲起始偏移（秒）
+  tempo: 120,         // 仅作元信息
+  notes: [
+    // { t: 秒, lane: 0|1|2|3 }
+  ],
+};
+
+// ---------- 常量 ----------
+const W = 500, H = 331;                 // canvas 尺寸
+const LANES = 4;
+const LANE_W = W / LANES;               // 每条轨道宽 125
+const HIT_LINE_Y = H - 18;             // 判定线 y（距 canvas 顶）
+const SPEED = 280;                     // 下落速度 px/s（Lead Time=0 时可视速度）
+const NOTE_H = 14, NOTE_W = LANE_W - 14;
+
+// 判定窗口（毫秒）
+const W_PERFECT = 46;
+const W_GREAT   = 92;
+const W_GOOD    = 138;
+const W_MISS    = 160;
+
+const KEY_MAP = { KeyD:0, KeyF:1, KeyJ:2, KeyK:3 };
+
+// ---------- 状态 ----------
+const state = {
+  running: false,
+  startTime: 0,         // performance.now() 基准
+  elapsed: 0,           // 当前时间（秒，已减 offset）
+  judged: [],           // 已判定音符索引
+  score: 0,
+  combo: 0,
+  maxCombo: 0,
+  counts: { perfect:0, great:0, good:0, miss:0 },
+  pressed: [false, false, false, false],
+  hitAnim: [],          // 按键闪光 {lane, t}
+  judgmentPopup: null,   // {text, color, t}
+  finished: false,
+};
+
+// ---------- DOM ----------
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+const startBtn = document.getElementById('start-btn');
+const scoreEl = document.getElementById('score-val');
+const comboEl = document.getElementById('combo-val');
+const accEl = document.getElementById('acc-val');
+
+// ---------- 工具 ----------
+function nowSec(){ return performance.now() / 1000; }
+
+function currentTime(){
+  if(!state.running) return 0;
+  return (nowSec() - state.startTime) - chart.offset;
+}
+
+function recomputeStats(){
+  const c = state.counts;
+  const total = c.perfect + c.great + c.good + c.miss;
+  // 计分：perfect=100, great=60, good=30，按满分 100w 归一
+  let raw = c.perfect*100 + c.great*60 + c.good*30;
+  let denom = (chart.notes.length || 1) * 100;
+  state.score = Math.round(raw / denom * 1000000);
+  // 准确率：perfect=1, great=0.7, good=0.4
+  let acc = total ? (c.perfect + c.great*0.7 + c.good*0.4) / total : 1;
+  scoreEl.textContent = String(state.score).padStart(7,'0');
+  comboEl.textContent = state.combo;
+  accEl.textContent = (acc*100).toFixed(2) + '%';
+}
+
+// ---------- 判定 ----------
+function judgeNote(note, deltaMs){
+  // deltaMs = 按下时刻 - 音符时刻，正=晚按，负=早按
+  const abs = Math.abs(deltaMs);
+  let label, color, gain;
+  if(abs <= W_PERFECT){ label='Perfect'; color='#7ee0a3'; gain=1; }
+  else if(abs <= W_GREAT){ label='Great'; color='#5b8def'; gain=0.7; }
+  else if(abs <= W_GOOD){ label='Good'; color='#d9a13b'; gain=0.4; }
+  else { label='Miss'; color='#e06b6b'; gain=0; }
+
+  if(label === 'Miss'){ state.combo = 0; }
+  else { state.combo++; state.maxCombo = Math.max(state.maxCombo, state.combo); }
+  state.counts[label.toLowerCase()]++;
+  state.judgmentPopup = { text:label, color, t:nowSec() };
+  recomputeStats();
+}
+
+function autoMiss(){
+  // 检查是否有音符已超过 Miss 窗口
+  const ct = currentTime();
+  for(let i=0;i<chart.notes.length;i++){
+    if(state.judged[i]) continue;
+    const note = chart.notes[i];
+    if(ct - note.t > W_MISS/1000){
+      state.judged[i] = true;
+      state.combo = 0;
+      state.counts.miss++;
+      state.judgmentPopup = { text:'Miss', color:'#e06b6b', t:nowSec() };
+      recomputeStats();
+    }
+  }
+}
+
+function tryHitLane(lane){
+  if(!state.running || state.finished) return;
+  const ct = currentTime();
+  // 找该轨道上距离判定线最近的、可判定的未判定音符
+  let bestIdx = -1, bestDelta = Infinity;
+  for(let i=0;i<chart.notes.length;i++){
+    if(state.judged[i]) continue;
+    const n = chart.notes[i];
+    if(n.lane !== lane) continue;
+    const delta = (ct - n.t) * 1000;  // ms
+    if(Math.abs(delta) > W_MISS) continue;
+    if(Math.abs(delta) < Math.abs(bestDelta)){
+      bestDelta = delta; bestIdx = i;
+    }
+  }
+  state.hitAnim.push({ lane, t:nowSec() });
+  if(bestIdx >= 0){
+    state.judged[bestIdx] = true;
+    judgeNote(chart.notes[bestIdx], bestDelta);
+  }
+}
+
+// ---------- 输入 ----------
+window.addEventListener('keydown', (e)=>{
+  if(e.repeat) return;
+  const lane = KEY_MAP[e.code];
+  if(lane === undefined) return;
+  e.preventDefault();
+  state.pressed[lane] = true;
+  tryHitLane(lane);
+});
+window.addEventListener('keyup', (e)=>{
+  const lane = KEY_MAP[e.code];
+  if(lane !== undefined) state.pressed[lane] = false;
+});
+
+// ---------- 开始 / 结束 ----------
+function startGame(){
+  state.running = true;
+  state.finished = false;
+  state.startTime = nowSec();
+  state.judged = new Array(chart.notes.length).fill(false);
+  state.score = 0; state.combo = 0; state.maxCombo = 0;
+  state.counts = { perfect:0, great:0, good:0, miss:0 };
+  state.hitAnim = []; state.judgmentPopup = null;
+  overlay.style.display = 'none';
+  recomputeStats();
+}
+startBtn.addEventListener('click', startGame);
+
+// ---------- 渲染 ----------
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  // 轨道背景
+  for(let i=0;i<LANES;i++){
+    ctx.fillStyle = (i%2===0) ? '#11141a' : '#0d1015';
+    ctx.fillRect(i*LANE_W, 0, LANE_W, H);
+    // 轨道分隔线
+    if(i>0){
+      ctx.strokeStyle = 'rgba(255,255,255,.06)';
+      ctx.beginPath(); ctx.moveTo(i*LANE_W, 0); ctx.lineTo(i*LANE_W, H); ctx.stroke();
+    }
+    // 按键高亮
+    if(state.pressed[i]){
+      ctx.fillStyle = 'rgba(91,141,239,.18)';
+      ctx.fillRect(i*LANE_W, 0, LANE_W, H);
+    }
+    // 按键闪光动画
+    for(const a of state.hitAnim){
+      if(a.lane === i){
+        const age = nowSec() - a.t;
+        if(age < 0.15){
+          const alpha = 1 - age/0.15;
+          ctx.fillStyle = 'rgba(126,224,163,' + (alpha*0.35) + ')';
+          ctx.fillRect(i*LANE_W, HIT_LINE_Y-30, LANE_W, 60);
+        }
+      }
+    }
+  }
+  // 清过期 hitAnim
+  state.hitAnim = state.hitAnim.filter(a => nowSec()-a.t < 0.15);
+
+  // 判定线
+  ctx.fillStyle = 'rgba(255,255,255,.85)';
+  ctx.fillRect(0, HIT_LINE_Y, W, 2);
+  ctx.fillStyle = 'rgba(91,141,239,.9)';
+  ctx.fillRect(0, HIT_LINE_Y+2, W, 2);
+
+  // 音符
+  if(state.running && !state.finished){
+    const ct = currentTime();
+    for(let i=0;i<chart.notes.length;i++){
+      if(state.judged[i]) continue;
+      const n = chart.notes[i];
+      const y = HIT_LINE_Y - (n.t - ct) * SPEED;
+      if(y < -NOTE_H || y > H + 20) continue;
+      const x = n.lane*LANE_W + (LANE_W - NOTE_W)/2;
+      // 音符本体
+      ctx.fillStyle = '#5b8def';
+      roundRect(ctx, x, y - NOTE_H/2, NOTE_W, NOTE_H, 4);
+      ctx.fill();
+      // 高光
+      ctx.fillStyle = 'rgba(255,255,255,.35)';
+      roundRect(ctx, x, y - NOTE_H/2, NOTE_W, 4, 2);
+      ctx.fill();
+    }
+    autoMiss();
+    // 结束判定：所有音符都判定过了，且最后一个音符过了 Miss 窗口
+    if(chart.notes.length > 0){
+      const last = chart.notes[chart.notes.length-1].t;
+      if(ct > last + W_MISS/1000 && state.judged.every(Boolean)){
+        state.finished = true;
+        overlay.style.display = 'flex';
+        overlay.querySelector('h2').textContent = '结算';
+        overlay.querySelector('p').innerHTML =
+          `Max Combo ${state.maxCombo} · Perfect ${state.counts.perfect} · Great ${state.counts.great} · Good ${state.counts.good} · Miss ${state.counts.miss}`;
+        startBtn.textContent = '再来一次';
+      }
+    }
+  }
+
+  // 判定弹字
+  if(state.judgmentPopup){
+    const age = nowSec() - state.judgmentPopup.t;
+    if(age < 0.6){
+      ctx.globalAlpha = 1 - age/0.6;
+      ctx.fillStyle = state.judgmentPopup.color;
+      ctx.font = 'bold 20px -apple-system, "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(state.judgmentPopup.text, W/2, HIT_LINE_Y - 40 - age*20);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // 按键提示（底部）
+  ctx.fillStyle = 'rgba(255,255,255,.25)';
+  ctx.font = '11px -apple-system, "Segoe UI", sans-serif';
+  ctx.textAlign = 'center';
+  const labels = ['D','F','J','K'];
+  for(let i=0;i<LANES;i++){
+    ctx.fillText(labels[i], i*LANE_W + LANE_W/2, H - 4);
+  }
+}
+
+function roundRect(c, x, y, w, h, r){
+  c.beginPath();
+  c.moveTo(x+r, y);
+  c.arcTo(x+w, y, x+w, y+h, r);
+  c.arcTo(x+w, y+h, x, y+h, r);
+  c.arcTo(x, y+h, x, y, r);
+  c.arcTo(x, y, x+w, y, r);
+  c.closePath();
+}
+
+// ---------- 主循环 ----------
+function loop(){
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+
+// ===== 窄视口整体缩放适配（与 2048.html 一致：固定 500×375 左上角） =====
+const stage = document.getElementById('stage');
+function fitStage(){
+  const vw = document.documentElement.clientWidth;
+  if(vw < 500){
+    const s = vw / 500;
+    stage.style.transform = 'scale(' + s + ')';
+    document.body.style.height = (375 * s) + 'px';
+    document.body.style.overflow = 'auto';
+  } else {
+    stage.style.transform = 'none';
+    document.body.style.height = '';
+    document.body.style.overflow = 'hidden';
+  }
+}
+window.addEventListener('resize', fitStage);
+fitStage();
+</script>
+</body>
+</html>
