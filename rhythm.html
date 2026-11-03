@@ -154,14 +154,31 @@
  *  - 当前谱面为空谱，引擎已就绪，后续向 chart.notes 填音符即可
  * ============================================================ */
 
-// ---------- 谱面数据（先空着，后续填谱） ----------
+// ---------- 谱面数据（格式：{m: 小节, b: 小节内拍 1~4, lane: 0~3}） ----------
 const chart = {
   offset: 0,          // 歌曲起始偏移（秒）
-  tempo: 120,         // 仅作元信息
+  tempo: 120,         // BPM
   notes: [
-    // { t: 秒, lane: 0|1|2|3 }
+    // 示例：{ m: 0, b: 1.0, lane: 0 }  // 第0小节第1拍四分，第1轨道
+    //        { m: 0, b: 1.5, lane: 1 }  // 第0小节第1拍后半（八分），第2轨道
+    //        { m: 0, b: 2.25, lane: 2 } // 第0小节第2拍第1个十六分
   ],
 };
+
+// 谱面归一化：把 {m,b,lane} 转成 {t,lane}（t 为到达判定线的秒数）
+(function normalizeChart(){
+  const beatDur = 60 / chart.tempo;     // 一拍多少秒
+  chart.notes = chart.notes.map(n => {
+    let t;
+    if(n.t !== undefined){
+      t = n.t;                          // 兼容旧的秒格式
+    } else {
+      const gb = n.m * 4 + (n.b - 1);   // 全局拍数
+      t = gb * beatDur;
+    }
+    return { t, lane: n.lane };
+  });
+})();
 
 // ---------- 常量 ----------
 const W = 500, H = 331;                 // canvas 尺寸

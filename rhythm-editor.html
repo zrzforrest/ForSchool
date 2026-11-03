@@ -152,6 +152,11 @@
     <div id="title">制谱器</div>
     <label class="ctl">BPM<input id="bpm" type="number" value="120" min="60" max="300" step="1"></label>
     <label class="ctl">偏移<input id="offset" type="number" value="0" step="0.01"></label>
+    <select class="ctl" id="grid" style="height:24px;font-size:11px;color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:0 2px;">
+      <option value="1">四分</option>
+      <option value="2" selected>八分</option>
+      <option value="4">十六分</option>
+    </select>
     <button class="btn primary" id="play-btn">▶ 播放</button>
     <button class="btn" id="import-btn">导入</button>
     <button class="btn" id="export-btn">导出</button>
@@ -181,37 +186,36 @@
 <script>
 /* ============================================================
  *  制谱器（4K 下落式）
- *  - 与 rhythm.html 游玩器数据格式完全兼容
- *  - chart = { offset, tempo, notes: [{t, lane}] }
- *  - 左键放音符，右键删，空格播放，滚轮滚时间
+ *  - 谱面以"小节 + 小节内拍"记录：{m: 小节, b: 拍位置, lane}
+ *    b=1.0 第1拍四分, b=1.5 第1拍后半(八分), b=1.25/1.75 十六分
+ *  - 内部统一用全局拍数：globalBeat = m*4 + (b-1)
  * ============================================================ */
 
 // ---------- 谱面数据 ----------
 const chart = {
-  offset: 0,
-  tempo: 120,
-  notes: [],   // {t: 秒, lane: 0|1|2|3}
+  offset: 0,          // 歌曲起始偏移（秒）
+  tempo: 120,         // BPM
+  notes: [],          // {m: 小节, b: 小节内拍位置(1~4), lane: 0|1|2|3}
 };
 
 // ---------- 常量 ----------
 const W = 500, H = 331;
-const TIME_AXIS_W = 44;            // 左侧时间刻度宽
+const TIME_AXIS_W = 44;
 const LANE_AREA_X = TIME_AXIS_W;
 const LANE_AREA_W = W - TIME_AXIS_W;
 const LANES = 4;
-const LANE_W = LANE_AREA_W / LANES;  // 114
-const VISIBLE_SECONDS = 20;          // 可视范围
+const LANE_W = LANE_AREA_W / LANES;
+const VISIBLE_BEATS = 32;          // 可视范围（拍）
 const NOTE_H = 10;
-const SNAP_SECONDS = 0.05;           // 放置吸附
-const DELETE_TOL = 0.08;             // 删除容差
+const DELETE_TOL_BEAT = 0.25;       // 删除容差（十六分）
 
 // ---------- 状态 ----------
 const state = {
   playing: false,
-  playhead: 0,          // 当前播放位置（秒）
-  scrollTime: 0,         // 可视范围起点
+  playheadBeat: 0,    // 当前播放位置（拍）
+  scrollBeat: 0,      // 可视范围起点（拍）
   startTime: 0,
-  startPlayhead: 0,
+  startPlayheadBeat: 0,
 };
 
 // ---------- DOM ----------
@@ -219,6 +223,7 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const bpmInput = document.getElementById('bpm');
 const offsetInput = document.getElementById('offset');
+const gridSelect = document.getElementById('grid');
 const playBtn = document.getElementById('play-btn');
 const importBtn = document.getElementById('import-btn');
 const exportBtn = document.getElementById('export-btn');
@@ -233,43 +238,59 @@ const panelCopy = document.getElementById('panel-copy');
 
 // ---------- 工具 ----------
 function nowSec(){ return performance.now() / 1000; }
-function timeToY(t){ return (t - state.scrollTime) / VISIBLE_SECONDS * H; }
-function yToTime(y){ return state.scrollTime + y / H * VISIBLE_SECONDS; }
+function gridValue(){ return parseFloat(gridSelect.value) || 2; }
+function gridDurBeat(){ return 1 / gridValue(); }
+function beatToSec(beat){ return beat * 60 / chart.tempo; }
+function secToBeat(sec){ return sec * chart.tempo / 60; }
+
+// 全局拍 ↔ 小节/小节内拍
+function globalBeatFromNote(n){ return n.m * 4 + (n.b - 1); }
+function noteFromGlobalBeat(gb, lane){
+  return { m: Math.floor(gb / 4), b: (gb % 4) + 1, lane };
+}
+
+function beatToY(beat){ return (beat - state.scrollBeat) / VISIBLE_BEATS * H; }
+function yToBeat(y){ return state.scrollBeat + y / H * VISIBLE_BEATS; }
+
 function xToLane(x){
   const rel = x - LANE_AREA_X;
   if(rel < 0 || rel > LANE_AREA_W) return -1;
   return Math.floor(rel / LANE_W);
 }
-function snap(t){ return Math.round(t / SNAP_SECONDS) * SNAP_SECONDS; }
 
-function totalTime(){
+function snapBeat(b){
+  const g = gridDurBeat();
+  return Math.round(b / g) * g;
+}
+
+function totalBeat(){
   if(chart.notes.length === 0) return 0;
-  return Math.max(...chart.notes.map(n => n.t));
+  return Math.max(...chart.notes.map(globalBeatFromNote));
 }
 
 function refreshTopbar(){
-  curTimeEl.textContent = state.playhead.toFixed(2);
-  totalTimeEl.textContent = totalTime().toFixed(2);
+  curTimeEl.textContent = state.playheadBeat.toFixed(2);
+  totalTimeEl.textContent = totalBeat().toFixed(2);
 }
 
 // ---------- 音符操作 ----------
-function addNote(t, lane){
-  t = Math.max(0, snap(t));
-  // 同轨道 ±0.05 秒内已有音符则不重复
+function addNote(globalBeat, lane){
+  globalBeat = Math.max(0, snapBeat(globalBeat));
+  // 同轨道 ±一个网格内已有音符则不重复
   for(const n of chart.notes){
-    if(n.lane === lane && Math.abs(n.t - t) < SNAP_SECONDS){
+    if(n.lane === lane && Math.abs(globalBeatFromNote(n) - globalBeat) < gridDurBeat()){
       return false;
     }
   }
-  chart.notes.push({ t, lane });
-  chart.notes.sort((a,b) => a.t - b.t);
+  chart.notes.push(noteFromGlobalBeat(globalBeat, lane));
+  chart.notes.sort((a,b) => globalBeatFromNote(a) - globalBeatFromNote(b));
   return true;
 }
 
-function deleteNear(t, lane){
+function deleteNear(globalBeat, lane){
   for(let i=chart.notes.length-1; i>=0; i--){
     const n = chart.notes[i];
-    if(n.lane === lane && Math.abs(n.t - t) < DELETE_TOL){
+    if(n.lane === lane && Math.abs(globalBeatFromNote(n) - globalBeat) < DELETE_TOL_BEAT){
       chart.notes.splice(i, 1);
       return true;
     }
@@ -280,7 +301,7 @@ function deleteNear(t, lane){
 // ---------- 播放 ----------
 function play(){
   state.playing = true;
-  state.startPlayhead = state.playhead;
+  state.startPlayheadBeat = state.playheadBeat;
   state.startTime = nowSec();
   playBtn.textContent = '⏸ 暂停';
 }
@@ -292,15 +313,15 @@ function togglePlay(){ state.playing ? pause() : play(); }
 
 function updatePlayhead(){
   if(!state.playing) return;
-  const dt = nowSec() - state.startTime;
-  state.playhead = state.startPlayhead + dt;
+  const dt = nowSec() - state.startTime;       // 秒
+  state.playheadBeat = state.startPlayheadBeat + secToBeat(dt);
   // 自动滚屏：播放头到底部 80% 时滚动
-  const y = timeToY(state.playhead);
+  const y = beatToY(state.playheadBeat);
   if(y > H * 0.8){
-    state.scrollTime = state.playhead - VISIBLE_SECONDS * 0.3;
+    state.scrollBeat = state.playheadBeat - VISIBLE_BEATS * 0.3;
   }
-  // 超过最后一个音符 5 秒自动停
-  if(totalTime() > 0 && state.playhead > totalTime() + 5){
+  // 超过最后一个音符 4 拍自动停
+  if(totalBeat() > 0 && state.playheadBeat > totalBeat() + 4){
     pause();
   }
 }
@@ -309,15 +330,10 @@ function updatePlayhead(){
 function draw(){
   ctx.clearRect(0,0,W,H);
 
-  // 背景
-  ctx.fillStyle = '#0a0c10';
-  ctx.fillRect(0,0,W,H);
-
   // 轨道区背景
   for(let i=0;i<LANES;i++){
     ctx.fillStyle = (i%2===0) ? '#11141a' : '#0d1015';
     ctx.fillRect(LANE_AREA_X + i*LANE_W, 0, LANE_W, H);
-    // 分隔线
     if(i>0){
       ctx.strokeStyle = 'rgba(255,255,255,.06)';
       ctx.beginPath();
@@ -326,38 +342,46 @@ function draw(){
       ctx.stroke();
     }
   }
-  // 轨道区右边框
   ctx.strokeStyle = 'rgba(255,255,255,.1)';
   ctx.beginPath();
   ctx.moveTo(LANE_AREA_X, 0);
   ctx.lineTo(LANE_AREA_X, H);
   ctx.stroke();
 
-  // 时间刻度（每 1 秒）
-  const startSec = Math.floor(state.scrollTime);
+  // 节拍网格线
+  const g = gridDurBeat();
+  const startGrid = Math.floor(state.scrollBeat / g) * g;
   ctx.font = '9px -apple-system, "Segoe UI", sans-serif';
   ctx.textAlign = 'left';
-  for(let s=startSec; s<=state.scrollTime + VISIBLE_SECONDS; s++){
-    const y = timeToY(s);
+  for(let b = startGrid; b <= state.scrollBeat + VISIBLE_BEATS + g; b += g){
+    const y = beatToY(b);
     if(y < 0 || y > H) continue;
+    const isBeat = Math.abs(b - Math.round(b)) < 1e-6;
+    const isMeasure = Math.abs(b % 4) < 1e-6;   // 小节线（每4拍）
     // 网格线
-    ctx.strokeStyle = s % 4 === 0 ? 'rgba(255,255,255,.1)' : 'rgba(255,255,25,.04)';
+    ctx.strokeStyle = isMeasure ? 'rgba(91,141,239,.35)'
+                     : isBeat ? 'rgba(255,255,255,.12)'
+                     : 'rgba(255,255,255,.04)';
     ctx.beginPath();
     ctx.moveTo(LANE_AREA_X, y);
     ctx.lineTo(W, y);
     ctx.stroke();
-    // 秒数
-    ctx.fillStyle = 'rgba(255,255,255,.4)';
-    ctx.fillText(s.toFixed(0)+'s', 4, y + 3);
+    // 标签：小节号
+    if(isMeasure){
+      ctx.fillStyle = 'rgba(91,141,239,.8)';
+      ctx.fillText('M' + (b/4), 4, y + 3);
+    } else if(isBeat){
+      ctx.fillStyle = 'rgba(255,255,255,.4)';
+      ctx.fillText('·', 18, y + 3);
+    }
   }
 
   // 音符
   for(const n of chart.notes){
-    const y = timeToY(n.t);
+    const y = beatToY(globalBeatFromNote(n));
     if(y < -NOTE_H || y > H + NOTE_H) continue;
     const x = LANE_AREA_X + n.lane * LANE_W + 6;
     const w = LANE_W - 12;
-    // 音符
     ctx.fillStyle = '#5b8def';
     roundRect(ctx, x, y - NOTE_H/2, w, NOTE_H, 3);
     ctx.fill();
@@ -367,11 +391,10 @@ function draw(){
   }
 
   // 播放头
-  const phY = timeToY(state.playhead);
+  const phY = beatToY(state.playheadBeat);
   if(phY >= 0 && phY <= H){
     ctx.fillStyle = '#7ee0a3';
     ctx.fillRect(LANE_AREA_X, phY - 1, LANE_AREA_W, 2);
-    // 三角形标记
     ctx.beginPath();
     ctx.moveTo(LANE_AREA_X - 6, phY - 4);
     ctx.lineTo(LANE_AREA_X, phY);
@@ -418,11 +441,11 @@ canvas.addEventListener('mousedown', (e)=>{
   const my = (e.clientY - rect.top) * scaleY;
   const lane = xToLane(mx);
   if(lane < 0) return;
-  const t = yToTime(my);
+  const beat = yToBeat(my);
   if(e.button === 0){
-    addNote(t, lane);
+    addNote(beat, lane);
   } else if(e.button === 2){
-    deleteNear(t, lane);
+    deleteNear(beat, lane);
   }
 });
 canvas.addEventListener('contextmenu', (e)=> e.preventDefault());
@@ -430,8 +453,8 @@ canvas.addEventListener('contextmenu', (e)=> e.preventDefault());
 // 滚轮滚动
 canvas.addEventListener('wheel', (e)=>{
   e.preventDefault();
-  const delta = e.deltaY > 0 ? VISIBLE_SECONDS * 0.15 : -VISIBLE_SECONDS * 0.15;
-  state.scrollTime = Math.max(0, state.scrollTime + delta);
+  const delta = e.deltaY > 0 ? VISIBLE_BEATS * 0.15 : -VISIBLE_BEATS * 0.15;
+  state.scrollBeat = Math.max(0, state.scrollBeat + delta);
 }, { passive:false });
 
 // ---------- 键盘 ----------
@@ -440,14 +463,14 @@ window.addEventListener('keydown', (e)=>{
     e.preventDefault();
     togglePlay();
   }
-  // 左右方向键：播放头 ±0.1 秒
+  // 左右方向键：播放头 ±1 个网格
   if(e.code === 'ArrowLeft'){
-    state.playhead = Math.max(0, state.playhead - 0.1);
-    if(timeToY(state.playhead) < 0) state.scrollTime = Math.max(0, state.playhead);
+    state.playheadBeat = Math.max(0, state.playheadBeat - gridDurBeat());
+    if(beatToY(state.playheadBeat) < 0) state.scrollBeat = Math.max(0, state.playheadBeat);
   }
   if(e.code === 'ArrowRight'){
-    state.playhead += 0.1;
-    if(timeToY(state.playhead) > H) state.scrollTime = state.playhead - VISIBLE_SECONDS * 0.8;
+    state.playheadBeat += gridDurBeat();
+    if(beatToY(state.playheadBeat) > H) state.scrollBeat = state.playheadBeat - VISIBLE_BEATS * 0.8;
   }
 });
 
@@ -464,7 +487,7 @@ playBtn.addEventListener('click', togglePlay);
 function openExport(){
   chart.tempo = parseFloat(bpmInput.value) || 120;
   chart.offset = parseFloat(offsetInput.value) || 0;
-  panelTitle.textContent = '导出谱面 JSON';
+  panelTitle.textContent = '导出谱面 JSON（单位：拍）';
   panelText.readOnly = true;
   panelText.value = JSON.stringify(chart, null, 2);
   panelConfirm.style.display = 'none';
@@ -472,7 +495,7 @@ function openExport(){
   panel.classList.add('show');
 }
 function openImport(){
-  panelTitle.textContent = '导入谱面 JSON';
+  panelTitle.textContent = '导入谱面 JSON（单位：拍）';
   panelText.readOnly = false;
   panelText.value = '';
   panelText.placeholder = '粘贴谱面 JSON 到这里…';
@@ -484,14 +507,26 @@ function doImport(){
   try{
     const data = JSON.parse(panelText.value);
     if(!Array.isArray(data.notes)) throw new Error('notes 必须是数组');
-    chart.notes = data.notes.map(n => ({ t: +n.t, lane: +n.lane }))
-                            .filter(n => n.lane >= 0 && n.lane <= 3 && n.t >= 0);
+    chart.notes = data.notes.map(n => {
+      const lane = +n.lane;
+      let gb;
+      if(n.m !== undefined && n.b !== undefined){
+        // 新格式：{m, b, lane}
+        gb = n.m * 4 + (n.b - 1);
+      } else if(n.beat !== undefined){
+        // 旧格式：{beat, lane}
+        gb = +n.beat;
+      } else {
+        return null;
+      }
+      return { m: Math.floor(gb/4), b: (gb%4)+1, lane };
+    }).filter(n => n && n.lane >= 0 && n.lane <= 3 && n.b >= 1 && n.b <= 4);
     chart.offset = +data.offset || 0;
     chart.tempo = +data.tempo || 120;
     offsetInput.value = chart.offset;
     bpmInput.value = chart.tempo;
-    state.scrollTime = 0;
-    state.playhead = 0;
+    state.scrollBeat = 0;
+    state.playheadBeat = 0;
     panel.classList.remove('show');
   }catch(err){
     alert('导入失败：' + err.message);
