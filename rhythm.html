@@ -126,8 +126,6 @@
   <div id="topbar">
     <a id="home-btn" href="index.html">← 主页</a>
     <div id="title">音游游玩器</div>
-    <button id="music-btn" style="height:26px;padding:0 10px;font-size:12px;color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:6px;cursor:pointer;">音乐</button>
-    <input type="file" id="audio-file" accept="audio/*" style="display:none">
     <div id="stats">
       <div class="item"><span class="label">分数</span><span class="val" id="score-val">0000000</span></div>
       <div class="item"><span class="label">连击</span><span class="val" id="combo-val">0</span></div>
@@ -137,8 +135,14 @@
   <canvas id="game" width="500" height="331"></canvas>
   <div id="overlay">
     <h2>4K 下落式音游</h2>
-    <p>当前为空白谱面（游玩器骨架）。按 D / F / J / K 击打判定线上的音符。<br>判定窗口：Perfect ±46ms · Great ±92ms · Good ±138ms · Miss &gt;160ms。</p>
-    <button id="start-btn">开始</button>
+    <p id="overlay-msg">导入谱面 JSON 和音乐文件后开始游玩。<br>判定窗口：Perfect ±46ms · Great ±92ms · Good ±138ms · Miss &gt;160ms。</p>
+    <div style="display:flex;gap:8px;">
+      <button id="import-chart-btn" style="height:30px;padding:0 14px;font-size:13px;color:#fff;background:var(--accent);border:1px solid var(--accent);border-radius:6px;cursor:pointer;">导入谱面</button>
+      <button id="import-music-btn" style="height:30px;padding:0 14px;font-size:13px;color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:6px;cursor:pointer;">导入音乐</button>
+      <button id="start-btn" style="height:30px;padding:0 14px;font-size:13px;font-weight:600;color:#fff;background:var(--accent);border:1px solid var(--accent);border-radius:6px;cursor:pointer;">开始</button>
+    </div>
+    <input type="file" id="chart-file" accept=".json,application/json" style="display:none">
+    <input type="file" id="audio-file" accept="audio/*" style="display:none">
     <div id="key-hint">
       <span><kbd>D</kbd>轨1</span>
       <span><kbd>F</kbd>轨2</span>
@@ -223,19 +227,47 @@ const startBtn = document.getElementById('start-btn');
 const scoreEl = document.getElementById('score-val');
 const comboEl = document.getElementById('combo-val');
 const accEl = document.getElementById('acc-val');
-const musicBtn = document.getElementById('music-btn');
+const overlayMsg = document.getElementById('overlay-msg');
+const importChartBtn = document.getElementById('import-chart-btn');
+const importMusicBtn = document.getElementById('import-music-btn');
+const chartFile = document.getElementById('chart-file');
 const audioFile = document.getElementById('audio-file');
 
 // ---------- 音频 ----------
 let audioCtx = null, audioBuffer = null, audioSource = null;
-musicBtn.addEventListener('click', ()=> audioFile.click());
+importMusicBtn.addEventListener('click', ()=> audioFile.click());
 audioFile.addEventListener('change', async (e)=>{
   const file = e.target.files[0];
   if(!file) return;
   if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if(audioCtx.state === 'suspended') await audioCtx.resume();
   audioBuffer = await audioCtx.decodeAudioData(await file.arrayBuffer());
-  musicBtn.textContent = file.name.length > 8 ? file.name.slice(0,8)+'…' : file.name;
+  importMusicBtn.textContent = file.name.length > 6 ? file.name.slice(0,6)+'…' : file.name;
+});
+
+// ---------- 谱面文件导入 ----------
+importChartBtn.addEventListener('click', ()=> chartFile.click());
+chartFile.addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    const data = JSON.parse(await file.text());
+    chart.offset = +data.offset || 0;
+    chart.tempo = +data.tempo || 120;
+    // 兼容 {m,b,lane} / {beat,lane} / {t,lane}
+    chart.notes = data.notes.map(n => {
+      if(n.m !== undefined && n.b !== undefined){
+        const gb = n.m * 4 + (n.b - 1);
+        return { t: gb * 60 / chart.tempo, lane: n.lane };
+      }
+      if(n.beat !== undefined) return { t: n.beat * 60 / chart.tempo, lane: n.lane };
+      return { t: n.t, lane: n.lane };
+    });
+    importChartBtn.textContent = file.name.length > 6 ? file.name.slice(0,6)+'…' : file.name;
+    overlayMsg.innerHTML = `已载入谱面（${chart.notes.length} 个音符，BPM ${chart.tempo}）。<br>点"开始"游玩。`;
+  }catch(err){
+    overlayMsg.textContent = '谱面加载失败：' + err.message;
+  }
 });
 
 // ---------- 工具 ----------
