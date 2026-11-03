@@ -1,0 +1,13 @@
+{
+  "charts": [
+    {
+      "id": "demo",
+      "title": "示例谱面",
+      "bpm": 120,
+      "level": 1,
+      "chart": "charts/demo/chart.json",
+      "audio": null,
+      "artist": "ForSchool"
+    }
+  ]
+}

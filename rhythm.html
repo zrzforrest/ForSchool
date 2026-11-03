@@ -135,11 +135,12 @@
   <canvas id="game" width="500" height="331"></canvas>
   <div id="overlay">
     <h2>4K 下落式音游</h2>
-    <p id="overlay-msg">内置示例谱面（8小节，34音符）。可导入自己的谱面 JSON 和音乐文件。<br>判定窗口：Perfect ±46ms · Great ±92ms · Good ±138ms · Miss &gt;160ms。</p>
-    <div style="display:flex;gap:8px;">
-      <button id="import-chart-btn" style="height:30px;padding:0 14px;font-size:13px;color:#fff;background:var(--accent);border:1px solid var(--accent);border-radius:6px;cursor:pointer;">导入谱面</button>
-      <button id="import-music-btn" style="height:30px;padding:0 14px;font-size:13px;color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:6px;cursor:pointer;">导入音乐</button>
-      <button id="start-btn" style="height:30px;padding:0 14px;font-size:13px;font-weight:600;color:#fff;background:var(--accent);border:1px solid var(--accent);border-radius:6px;cursor:pointer;">开始</button>
+    <p id="overlay-msg" style="margin-bottom:6px;">选择一个谱面开始游玩</p>
+    <div id="chart-list" style="display:flex;flex-direction:column;gap:6px;width:380px;max-height:180px;overflow-y:auto;"></div>
+    <div style="display:flex;gap:8px;margin-top:6px;">
+      <button id="start-btn" style="height:30px;padding:0 18px;font-size:13px;font-weight:600;color:#fff;background:var(--accent);border:1px solid var(--accent);border-radius:6px;cursor:pointer;" disabled>开始</button>
+      <button id="local-chart-btn" style="height:30px;padding:0 12px;font-size:12px;color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:6px;cursor:pointer;">本地谱面</button>
+      <button id="local-audio-btn" style="height:30px;padding:0 12px;font-size:12px;color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:6px;cursor:pointer;">本地音乐</button>
     </div>
     <input type="file" id="chart-file" accept=".json,application/json" style="display:none">
     <input type="file" id="audio-file" accept="audio/*" style="display:none">
@@ -160,48 +161,12 @@
  *  - 当前谱面为空谱，引擎已就绪，后续向 chart.notes 填音符即可
  * ============================================================ */
 
-// ---------- 谱面数据（格式：{m: 小节, b: 小节内拍 1~4, lane: 0~3}） ----------
+// ---------- 谱面数据（从 charts/ 加载） ----------
 const chart = {
   offset: 0,
   tempo: 120,
-  notes: [
-    // 第0小节：四分音符交替
-    { m:0, b:1.0, lane:0 }, { m:0, b:2.0, lane:1 }, { m:0, b:3.0, lane:2 }, { m:0, b:4.0, lane:3 },
-    // 第1小节：八分音符
-    { m:1, b:1.0, lane:0 }, { m:1, b:1.5, lane:3 }, { m:1, b:2.0, lane:1 }, { m:1, b:2.5, lane:2 },
-    { m:1, b:3.0, lane:0 }, { m:1, b:4.0, lane:3 },
-    // 第2小节：四分
-    { m:2, b:1.0, lane:0 }, { m:2, b:2.0, lane:1 }, { m:2, b:3.0, lane:2 }, { m:2, b:4.0, lane:3 },
-    // 第3小节：反向上行
-    { m:3, b:1.0, lane:3 }, { m:3, b:1.5, lane:2 }, { m:3, b:2.0, lane:1 }, { m:3, b:2.5, lane:0 },
-    { m:3, b:3.0, lane:0 }, { m:3, b:4.0, lane:1 },
-    // 第4小节：简单四分
-    { m:4, b:1.0, lane:0 }, { m:4, b:2.0, lane:2 }, { m:4, b:3.0, lane:1 }, { m:4, b:4.0, lane:3 },
-    // 第5小节：十六分
-    { m:5, b:1.0, lane:0 }, { m:5, b:1.25, lane:1 }, { m:5, b:1.5, lane:2 }, { m:5, b:1.75, lane:3 },
-    { m:5, b:2.0, lane:0 }, { m:5, b:3.0, lane:1 }, { m:5, b:4.0, lane:2 },
-    // 第6小节：反向四分
-    { m:6, b:1.0, lane:3 }, { m:6, b:2.0, lane:2 }, { m:6, b:3.0, lane:1 }, { m:6, b:4.0, lane:0 },
-    // 第7小节：结尾八分连击
-    { m:7, b:1.0, lane:0 }, { m:7, b:1.5, lane:1 }, { m:7, b:2.0, lane:2 }, { m:7, b:2.5, lane:3 },
-    { m:7, b:3.0, lane:0 }, { m:7, b:3.5, lane:1 }, { m:7, b:4.0, lane:2 }, { m:7, b:4.5, lane:3 },
-  ],
+  notes: [],
 };
-
-// 谱面归一化：把 {m,b,lane} 转成 {t,lane}（t 为到达判定线的秒数）
-(function normalizeChart(){
-  const beatDur = 60 / chart.tempo;     // 一拍多少秒
-  chart.notes = chart.notes.map(n => {
-    let t;
-    if(n.t !== undefined){
-      t = n.t;                          // 兼容旧的秒格式
-    } else {
-      const gb = n.m * 4 + (n.b - 1);   // 全局拍数
-      t = gb * beatDur;
-    }
-    return { t, lane: n.lane };
-  });
-})();
 
 // ---------- 常量 ----------
 const W = 500, H = 331;                 // canvas 尺寸
@@ -245,25 +210,105 @@ const scoreEl = document.getElementById('score-val');
 const comboEl = document.getElementById('combo-val');
 const accEl = document.getElementById('acc-val');
 const overlayMsg = document.getElementById('overlay-msg');
-const importChartBtn = document.getElementById('import-chart-btn');
-const importMusicBtn = document.getElementById('import-music-btn');
+const chartListEl = document.getElementById('chart-list');
+const localChartBtn = document.getElementById('local-chart-btn');
+const localAudioBtn = document.getElementById('local-audio-btn');
 const chartFile = document.getElementById('chart-file');
 const audioFile = document.getElementById('audio-file');
 
+// ---------- 谱面列表 ----------
+let selectedChart = null;     // 当前选中的谱面索引项
+let availableCharts = [];
+
+async function loadChartList(){
+  try{
+    const resp = await fetch('charts/index.json');
+    const data = await resp.json();
+    availableCharts = data.charts || [];
+    renderChartList();
+  }catch(err){
+    overlayMsg.textContent = '无法加载谱面列表：' + err.message;
+  }
+}
+
+function renderChartList(){
+  chartListEl.innerHTML = '';
+  if(availableCharts.length === 0){
+    chartListEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px;">暂无谱面</div>';
+    return;
+  }
+  availableCharts.forEach((c, i)=>{
+    const card = document.createElement('div');
+    card.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;cursor:pointer;';
+    card.innerHTML = `
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:600;">${c.title}</div>
+        <div style="font-size:10px;color:var(--muted);">${c.artist||''} · ${c.bpm} BPM · Lv.${c.level||1} ${c.audio?'':'· 无音乐'}</div>
+      </div>
+    `;
+    card.onclick = ()=>{
+      selectedChart = c;
+      document.querySelectorAll('#chart-list > div').forEach(d => d.style.borderColor = 'var(--border)');
+      card.style.borderColor = 'var(--accent)';
+      startBtn.disabled = false;
+      // 自动加载谱面数据
+      loadChartData(c);
+    };
+    chartListEl.appendChild(card);
+  });
+}
+
+async function loadChartData(c){
+  try{
+    const resp = await fetch(c.chart);
+    const data = await resp.json();
+    chart.offset = +data.offset || 0;
+    chart.tempo = +data.tempo || 120;
+    chart.notes = data.notes;
+    normalizeNotes();
+    // 加载音频
+    if(c.audio){
+      audioBuffer = null;
+      try{
+        const aResp = await fetch(c.audio);
+        const aBuf = await aResp.arrayBuffer();
+        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if(audioCtx.state === 'suspended') await audioCtx.resume();
+        audioBuffer = await audioCtx.decodeAudioData(aBuf);
+      }catch(e){ console.warn('音频加载失败', e); }
+    }else{
+      audioBuffer = null;
+    }
+    overlayMsg.textContent = `已载入：${c.title}（${chart.notes.length} 音符，${chart.tempo} BPM）`;
+  }catch(err){
+    overlayMsg.textContent = '谱面加载失败：' + err.message;
+  }
+}
+
+// 把 {m,b,lane} 转成 {t,lane}
+function normalizeNotes(){
+  const beatDur = 60 / chart.tempo;
+  chart.notes = chart.notes.map(n => {
+    if(n.t !== undefined) return { t: n.t, lane: n.lane };
+    const gb = n.m * 4 + (n.b - 1);
+    return { t: gb * beatDur, lane: n.lane };
+  });
+}
+
 // ---------- 音频 ----------
 let audioCtx = null, audioBuffer = null, audioSource = null;
-importMusicBtn.addEventListener('click', ()=> audioFile.click());
+localAudioBtn.addEventListener('click', ()=> audioFile.click());
 audioFile.addEventListener('change', async (e)=>{
   const file = e.target.files[0];
   if(!file) return;
   if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if(audioCtx.state === 'suspended') await audioCtx.resume();
   audioBuffer = await audioCtx.decodeAudioData(await file.arrayBuffer());
-  importMusicBtn.textContent = file.name.length > 6 ? file.name.slice(0,6)+'…' : file.name;
+  localAudioBtn.textContent = file.name.length > 4 ? file.name.slice(0,4)+'…' : file.name;
 });
 
-// ---------- 谱面文件导入 ----------
-importChartBtn.addEventListener('click', ()=> chartFile.click());
+// 本地谱面导入（兜底）
+localChartBtn.addEventListener('click', ()=> chartFile.click());
 chartFile.addEventListener('change', async (e)=>{
   const file = e.target.files[0];
   if(!file) return;
@@ -271,21 +316,17 @@ chartFile.addEventListener('change', async (e)=>{
     const data = JSON.parse(await file.text());
     chart.offset = +data.offset || 0;
     chart.tempo = +data.tempo || 120;
-    // 兼容 {m,b,lane} / {beat,lane} / {t,lane}
-    chart.notes = data.notes.map(n => {
-      if(n.m !== undefined && n.b !== undefined){
-        const gb = n.m * 4 + (n.b - 1);
-        return { t: gb * 60 / chart.tempo, lane: n.lane };
-      }
-      if(n.beat !== undefined) return { t: n.beat * 60 / chart.tempo, lane: n.lane };
-      return { t: n.t, lane: n.lane };
-    });
-    importChartBtn.textContent = file.name.length > 6 ? file.name.slice(0,6)+'…' : file.name;
-    overlayMsg.innerHTML = `已载入谱面（${chart.notes.length} 个音符，BPM ${chart.tempo}）。<br>点"开始"游玩。`;
+    chart.notes = data.notes;
+    normalizeNotes();
+    startBtn.disabled = false;
+    overlayMsg.textContent = `已载入本地谱面（${chart.notes.length} 音符）`;
   }catch(err){
     overlayMsg.textContent = '谱面加载失败：' + err.message;
   }
 });
+
+// 页面加载时获取谱面列表
+loadChartList();
 
 // ---------- 工具 ----------
 function nowSec(){ return performance.now() / 1000; }
