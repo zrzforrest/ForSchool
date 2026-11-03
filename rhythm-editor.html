@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>制谱器 · ForSchool</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d0f13'/%3E%3Crect x='14' y='20' width='6' height='24' rx='2' fill='%235b8def'/%3E%3Crect x='26' y='14' width='6' height='30' rx='2' fill='%237ee0a3'/%3E%3Crect x='38' y='24' width='6' height='20' rx='2' fill='%23d9a13b'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0d0f13;
+    --surface:#16181d;
+    --panel:#1b1e25;
+    --border:#2a2e39;
+    --border-strong:#363b49;
+    --text:#e8eaee;
+    --muted:#98a0ad;
+    --accent:#5b8def;
+    --accent-strong:#4a7fe0;
+    --green:#7ee0a3;
+    --yellow:#d9a13b;
+    --red:#e06b6b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    overflow:hidden;
+  }
+  #stage{
+    position:absolute;
+    top:0;left:0;
+    width:500px;height:375px;
+    background:var(--bg);
+    transform-origin:top left;
+    overflow:hidden;
+  }
+  /* ===== 顶栏 ===== */
+  #topbar{
+    position:absolute;
+    top:0;left:0;
+    width:500px;height:44px;
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:0 8px;
+    z-index:5;
+  }
+  #home-btn{
+    flex:none;
+    height:26px;padding:0 8px;
+    font-size:12px;color:var(--text);
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:5px;
+    cursor:pointer;
+    text-decoration:none;
+    display:inline-flex;align-items:center;
+  }
+  #home-btn:hover{border-color:var(--border-strong);}
+  #title{font-size:13px;font-weight:700;flex:none;}
+  .ctl{
+    flex:none;
+    display:inline-flex;align-items:center;gap:3px;
+    font-size:11px;color:var(--muted);
+  }
+  .ctl input{
+    width:44px;height:24px;
+    font-size:11px;text-align:center;
+    color:var(--text);
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:4px;
+    font-family:inherit;
+  }
+  .ctl input:focus{outline:none;border-color:var(--accent);}
+  .btn{
+    flex:none;
+    height:26px;padding:0 10px;
+    font-size:12px;font-weight:600;
+    color:var(--text);
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:5px;
+    cursor:pointer;
+  }
+  .btn:hover{border-color:var(--border-strong);background:#21242d;}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn.primary:hover{background:var(--accent-strong);}
+  #time-display{
+    margin-left:auto;
+    font-size:11px;color:var(--muted);
+    font-variant-numeric:tabular-nums;
+  }
+  #time-display b{color:var(--text);font-size:12px;}
+  /* ===== 画布 ===== */
+  #canvas{
+    position:absolute;
+    top:44px;left:0;
+    width:500px;height:331px;
+    background:#0a0c10;
+    cursor:crosshair;
+  }
+  /* ===== 导入/导出面板 ===== */
+  #panel{
+    position:absolute;
+    top:44px;left:0;
+    width:500px;height:331px;
+    background:rgba(10,12,16,.96);
+    display:none;
+    flex-direction:column;
+    padding:14px;
+    gap:8px;
+    z-index:20;
+  }
+  #panel.show{display:flex;}
+  #panel h3{font-size:14px;font-weight:700;}
+  #panel textarea{
+    flex:1;
+    width:100%;
+    font-family:"Cascadia Code","Consolas",monospace;
+    font-size:11px;
+    color:var(--text);
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:8px;
+    resize:none;
+    line-height:1.4;
+  }
+  #panel textarea:focus{outline:none;border-color:var(--accent);}
+  #panel-actions{display:flex;gap:8px;justify-content:flex-end;}
+  #hint-bar{
+    position:absolute;
+    bottom:0;left:0;
+    width:500px;height:20px;
+    background:var(--surface);
+    border-top:1px solid var(--border);
+    font-size:10px;color:var(--muted);
+    display:flex;align-items:center;padding:0 8px;
+    gap:10px;z-index:4;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="topbar">
+    <a id="home-btn" href="index.html">←</a>
+    <div id="title">制谱器</div>
+    <label class="ctl">BPM<input id="bpm" type="number" value="120" min="60" max="300" step="1"></label>
+    <label class="ctl">偏移<input id="offset" type="number" value="0" step="0.01"></label>
+    <button class="btn primary" id="play-btn">▶ 播放</button>
+    <button class="btn" id="import-btn">导入</button>
+    <button class="btn" id="export-btn">导出</button>
+    <div id="time-display"><b id="cur-time">0.00</b>s / <span id="total-time">0.00</span>s</div>
+  </div>
+  <canvas id="canvas" width="500" height="331"></canvas>
+
+  <div id="panel">
+    <h3 id="panel-title">导出谱面</h3>
+    <textarea id="panel-text" readonly placeholder="谱面 JSON 会显示在这里"></textarea>
+    <div id="panel-actions">
+      <button class="btn" id="panel-cancel">关闭</button>
+      <button class="btn primary" id="panel-confirm" style="display:none;">加载</button>
+      <button class="btn primary" id="panel-copy" style="display:none;">复制</button>
+    </div>
+  </div>
+
+  <div id="hint-bar">
+    <span>左键 放音符</span>
+    <span>右键 删音符</span>
+    <span>空格 播放/暂停</span>
+    <span>滚轮 滚动时间</span>
+    <span style="margin-left:auto;">D F J K</span>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+ *  制谱器（4K 下落式）
+ *  - 与 rhythm.html 游玩器数据格式完全兼容
+ *  - chart = { offset, tempo, notes: [{t, lane}] }
+ *  - 左键放音符，右键删，空格播放，滚轮滚时间
+ * ============================================================ */
+
+// ---------- 谱面数据 ----------
+const chart = {
+  offset: 0,
+  tempo: 120,
+  notes: [],   // {t: 秒, lane: 0|1|2|3}
+};
+
+// ---------- 常量 ----------
+const W = 500, H = 331;
+const TIME_AXIS_W = 44;            // 左侧时间刻度宽
+const LANE_AREA_X = TIME_AXIS_W;
+const LANE_AREA_W = W - TIME_AXIS_W;
+const LANES = 4;
+const LANE_W = LANE_AREA_W / LANES;  // 114
+const VISIBLE_SECONDS = 20;          // 可视范围
+const NOTE_H = 10;
+const SNAP_SECONDS = 0.05;           // 放置吸附
+const DELETE_TOL = 0.08;             // 删除容差
+
+// ---------- 状态 ----------
+const state = {
+  playing: false,
+  playhead: 0,          // 当前播放位置（秒）
+  scrollTime: 0,         // 可视范围起点
+  startTime: 0,
+  startPlayhead: 0,
+};
+
+// ---------- DOM ----------
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const bpmInput = document.getElementById('bpm');
+const offsetInput = document.getElementById('offset');
+const playBtn = document.getElementById('play-btn');
+const importBtn = document.getElementById('import-btn');
+const exportBtn = document.getElementById('export-btn');
+const curTimeEl = document.getElementById('cur-time');
+const totalTimeEl = document.getElementById('total-time');
+const panel = document.getElementById('panel');
+const panelTitle = document.getElementById('panel-title');
+const panelText = document.getElementById('panel-text');
+const panelCancel = document.getElementById('panel-cancel');
+const panelConfirm = document.getElementById('panel-confirm');
+const panelCopy = document.getElementById('panel-copy');
+
+// ---------- 工具 ----------
+function nowSec(){ return performance.now() / 1000; }
+function timeToY(t){ return (t - state.scrollTime) / VISIBLE_SECONDS * H; }
+function yToTime(y){ return state.scrollTime + y / H * VISIBLE_SECONDS; }
+function xToLane(x){
+  const rel = x - LANE_AREA_X;
+  if(rel < 0 || rel > LANE_AREA_W) return -1;
+  return Math.floor(rel / LANE_W);
+}
+function snap(t){ return Math.round(t / SNAP_SECONDS) * SNAP_SECONDS; }
+
+function totalTime(){
+  if(chart.notes.length === 0) return 0;
+  return Math.max(...chart.notes.map(n => n.t));
+}
+
+function refreshTopbar(){
+  curTimeEl.textContent = state.playhead.toFixed(2);
+  totalTimeEl.textContent = totalTime().toFixed(2);
+}
+
+// ---------- 音符操作 ----------
+function addNote(t, lane){
+  t = Math.max(0, snap(t));
+  // 同轨道 ±0.05 秒内已有音符则不重复
+  for(const n of chart.notes){
+    if(n.lane === lane && Math.abs(n.t - t) < SNAP_SECONDS){
+      return false;
+    }
+  }
+  chart.notes.push({ t, lane });
+  chart.notes.sort((a,b) => a.t - b.t);
+  return true;
+}
+
+function deleteNear(t, lane){
+  for(let i=chart.notes.length-1; i>=0; i--){
+    const n = chart.notes[i];
+    if(n.lane === lane && Math.abs(n.t - t) < DELETE_TOL){
+      chart.notes.splice(i, 1);
+      return true;
+    }
+  }
+  return false;
+}
+
+// ---------- 播放 ----------
+function play(){
+  state.playing = true;
+  state.startPlayhead = state.playhead;
+  state.startTime = nowSec();
+  playBtn.textContent = '⏸ 暂停';
+}
+function pause(){
+  state.playing = false;
+  playBtn.textContent = '▶ 播放';
+}
+function togglePlay(){ state.playing ? pause() : play(); }
+
+function updatePlayhead(){
+  if(!state.playing) return;
+  const dt = nowSec() - state.startTime;
+  state.playhead = state.startPlayhead + dt;
+  // 自动滚屏：播放头到底部 80% 时滚动
+  const y = timeToY(state.playhead);
+  if(y > H * 0.8){
+    state.scrollTime = state.playhead - VISIBLE_SECONDS * 0.3;
+  }
+  // 超过最后一个音符 5 秒自动停
+  if(totalTime() > 0 && state.playhead > totalTime() + 5){
+    pause();
+  }
+}
+
+// ---------- 渲染 ----------
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  // 背景
+  ctx.fillStyle = '#0a0c10';
+  ctx.fillRect(0,0,W,H);
+
+  // 轨道区背景
+  for(let i=0;i<LANES;i++){
+    ctx.fillStyle = (i%2===0) ? '#11141a' : '#0d1015';
+    ctx.fillRect(LANE_AREA_X + i*LANE_W, 0, LANE_W, H);
+    // 分隔线
+    if(i>0){
+      ctx.strokeStyle = 'rgba(255,255,255,.06)';
+      ctx.beginPath();
+      ctx.moveTo(LANE_AREA_X + i*LANE_W, 0);
+      ctx.lineTo(LANE_AREA_X + i*LANE_W, H);
+      ctx.stroke();
+    }
+  }
+  // 轨道区右边框
+  ctx.strokeStyle = 'rgba(255,255,255,.1)';
+  ctx.beginPath();
+  ctx.moveTo(LANE_AREA_X, 0);
+  ctx.lineTo(LANE_AREA_X, H);
+  ctx.stroke();
+
+  // 时间刻度（每 1 秒）
+  const startSec = Math.floor(state.scrollTime);
+  ctx.font = '9px -apple-system, "Segoe UI", sans-serif';
+  ctx.textAlign = 'left';
+  for(let s=startSec; s<=state.scrollTime + VISIBLE_SECONDS; s++){
+    const y = timeToY(s);
+    if(y < 0 || y > H) continue;
+    // 网格线
+    ctx.strokeStyle = s % 4 === 0 ? 'rgba(255,255,255,.1)' : 'rgba(255,255,25,.04)';
+    ctx.beginPath();
+    ctx.moveTo(LANE_AREA_X, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+    // 秒数
+    ctx.fillStyle = 'rgba(255,255,255,.4)';
+    ctx.fillText(s.toFixed(0)+'s', 4, y + 3);
+  }
+
+  // 音符
+  for(const n of chart.notes){
+    const y = timeToY(n.t);
+    if(y < -NOTE_H || y > H + NOTE_H) continue;
+    const x = LANE_AREA_X + n.lane * LANE_W + 6;
+    const w = LANE_W - 12;
+    // 音符
+    ctx.fillStyle = '#5b8def';
+    roundRect(ctx, x, y - NOTE_H/2, w, NOTE_H, 3);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.4)';
+    roundRect(ctx, x, y - NOTE_H/2, w, 3, 1);
+    ctx.fill();
+  }
+
+  // 播放头
+  const phY = timeToY(state.playhead);
+  if(phY >= 0 && phY <= H){
+    ctx.fillStyle = '#7ee0a3';
+    ctx.fillRect(LANE_AREA_X, phY - 1, LANE_AREA_W, 2);
+    // 三角形标记
+    ctx.beginPath();
+    ctx.moveTo(LANE_AREA_X - 6, phY - 4);
+    ctx.lineTo(LANE_AREA_X, phY);
+    ctx.lineTo(LANE_AREA_X - 6, phY + 4);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // 底部按键提示
+  ctx.fillStyle = 'rgba(255,255,255,.2)';
+  ctx.font = '10px -apple-system, "Segoe UI", sans-serif';
+  ctx.textAlign = 'center';
+  const labels = ['D','F','J','K'];
+  for(let i=0;i<LANES;i++){
+    ctx.fillText(labels[i], LANE_AREA_X + i*LANE_W + LANE_W/2, H - 6);
+  }
+}
+
+function roundRect(c, x, y, w, h, r){
+  c.beginPath();
+  c.moveTo(x+r, y);
+  c.arcTo(x+w, y, x+w, y+h, r);
+  c.arcTo(x+w, y+h, x, y+h, r);
+  c.arcTo(x, y+h, x, y, r);
+  c.arcTo(x, y, x+w, y, r);
+  c.closePath();
+}
+
+// ---------- 主循环 ----------
+function loop(){
+  updatePlayhead();
+  draw();
+  refreshTopbar();
+  requestAnimationFrame(loop);
+}
+loop();
+
+// ---------- 鼠标交互 ----------
+canvas.addEventListener('mousedown', (e)=>{
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
+  const lane = xToLane(mx);
+  if(lane < 0) return;
+  const t = yToTime(my);
+  if(e.button === 0){
+    addNote(t, lane);
+  } else if(e.button === 2){
+    deleteNear(t, lane);
+  }
+});
+canvas.addEventListener('contextmenu', (e)=> e.preventDefault());
+
+// 滚轮滚动
+canvas.addEventListener('wheel', (e)=>{
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? VISIBLE_SECONDS * 0.15 : -VISIBLE_SECONDS * 0.15;
+  state.scrollTime = Math.max(0, state.scrollTime + delta);
+}, { passive:false });
+
+// ---------- 键盘 ----------
+window.addEventListener('keydown', (e)=>{
+  if(e.code === 'Space' && !e.repeat){
+    e.preventDefault();
+    togglePlay();
+  }
+  // 左右方向键：播放头 ±0.1 秒
+  if(e.code === 'ArrowLeft'){
+    state.playhead = Math.max(0, state.playhead - 0.1);
+    if(timeToY(state.playhead) < 0) state.scrollTime = Math.max(0, state.playhead);
+  }
+  if(e.code === 'ArrowRight'){
+    state.playhead += 0.1;
+    if(timeToY(state.playhead) > H) state.scrollTime = state.playhead - VISIBLE_SECONDS * 0.8;
+  }
+});
+
+// ---------- 顶栏同步 ----------
+bpmInput.addEventListener('change', ()=>{
+  chart.tempo = parseFloat(bpmInput.value) || 120;
+});
+offsetInput.addEventListener('change', ()=>{
+  chart.offset = parseFloat(offsetInput.value) || 0;
+});
+playBtn.addEventListener('click', togglePlay);
+
+// ---------- 导入 / 导出 ----------
+function openExport(){
+  chart.tempo = parseFloat(bpmInput.value) || 120;
+  chart.offset = parseFloat(offsetInput.value) || 0;
+  panelTitle.textContent = '导出谱面 JSON';
+  panelText.readOnly = true;
+  panelText.value = JSON.stringify(chart, null, 2);
+  panelConfirm.style.display = 'none';
+  panelCopy.style.display = 'inline-block';
+  panel.classList.add('show');
+}
+function openImport(){
+  panelTitle.textContent = '导入谱面 JSON';
+  panelText.readOnly = false;
+  panelText.value = '';
+  panelText.placeholder = '粘贴谱面 JSON 到这里…';
+  panelConfirm.style.display = 'inline-block';
+  panelCopy.style.display = 'none';
+  panel.classList.add('show');
+}
+function doImport(){
+  try{
+    const data = JSON.parse(panelText.value);
+    if(!Array.isArray(data.notes)) throw new Error('notes 必须是数组');
+    chart.notes = data.notes.map(n => ({ t: +n.t, lane: +n.lane }))
+                            .filter(n => n.lane >= 0 && n.lane <= 3 && n.t >= 0);
+    chart.offset = +data.offset || 0;
+    chart.tempo = +data.tempo || 120;
+    offsetInput.value = chart.offset;
+    bpmInput.value = chart.tempo;
+    state.scrollTime = 0;
+    state.playhead = 0;
+    panel.classList.remove('show');
+  }catch(err){
+    alert('导入失败：' + err.message);
+  }
+}
+exportBtn.addEventListener('click', openExport);
+importBtn.addEventListener('click', openImport);
+panelCancel.addEventListener('click', ()=> panel.classList.remove('show'));
+panelConfirm.addEventListener('click', doImport);
+panelCopy.addEventListener('click', ()=>{
+  panelText.select();
+  document.execCommand('copy');
+});
+
+// ---------- 窄视口缩放 ----------
+const stage = document.getElementById('stage');
+function fitStage(){
+  const vw = document.documentElement.clientWidth;
+  if(vw < 500){
+    const s = vw / 500;
+    stage.style.transform = 'scale(' + s + ')';
+    document.body.style.height = (375 * s) + 'px';
+    document.body.style.overflow = 'auto';
+  } else {
+    stage.style.transform = 'none';
+    document.body.style.height = '';
+    document.body.style.overflow = 'hidden';
+  }
+}
+window.addEventListener('resize', fitStage);
+fitStage();
+</script>
+</body>
+</html>
