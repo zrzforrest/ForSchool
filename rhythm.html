@@ -265,10 +265,11 @@ function selectChart(i){
   if(i < 0 || i >= availableCharts.length) return;
   currentSel = i;
   selectedChart = availableCharts[i];
-  const cards = chartListEl.querySelectorAll('div');
-  cards.forEach((d, idx)=>{ d.style.borderColor = idx === i ? 'var(--accent)' : 'var(--border)'; });
+  const cards = chartListEl.children;
+  for(let idx = 0; idx < cards.length; idx++){
+    cards[idx].style.borderColor = idx === i ? 'var(--accent)' : 'var(--border)';
+  }
   startBtn.disabled = false;
-  // 自动滚动到选中项
   if(cards[i]) cards[i].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   loadChartData(selectedChart);
 }
@@ -297,23 +298,27 @@ async function loadChartData(c){
     chart.tempo = +data.tempo || 120;
     chart.notes = data.notes;
     normalizeNotes();
-    // 加载音频
+    overlayMsg.textContent = `已载入：${c.title}（${chart.notes.length} 音符，${chart.tempo} BPM）`;
+    // 音频后台加载，不阻塞谱面选择
     if(c.audio){
       audioBuffer = null;
-      try{
-        const aResp = await fetch(c.audio);
-        const aBuf = await aResp.arrayBuffer();
-        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if(audioCtx.state === 'suspended') await audioCtx.resume();
-        audioBuffer = await audioCtx.decodeAudioData(aBuf);
-      }catch(e){ console.warn('音频加载失败', e); }
+      loadAudio(c.audio);
     }else{
       audioBuffer = null;
     }
-    overlayMsg.textContent = `已载入：${c.title}（${chart.notes.length} 音符，${chart.tempo} BPM）`;
   }catch(err){
     overlayMsg.textContent = '谱面加载失败：' + err.message;
   }
+}
+
+async function loadAudio(url){
+  try{
+    const aResp = await fetch(url);
+    const aBuf = await aResp.arrayBuffer();
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') await audioCtx.resume();
+    audioBuffer = await audioCtx.decodeAudioData(aBuf);
+  }catch(e){ console.warn('音频加载失败', e); }
 }
 
 // 把 {m,b,lane} 转成 {t,lane}
