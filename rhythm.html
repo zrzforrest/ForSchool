@@ -137,7 +137,13 @@
   <div id="overlay">
     <h2>4K 下落式音游</h2>
     <p id="overlay-msg" style="margin-bottom:6px;">选择一个谱面开始游玩</p>
-    <div id="chart-list" style="display:flex;flex-direction:column;gap:6px;width:380px;max-height:180px;overflow-y:auto;"></div>
+    <div style="display:flex;gap:6px;align-items:stretch;">
+      <div id="chart-list" style="display:flex;flex-direction:column;gap:6px;width:360px;max-height:180px;overflow-y:auto;"></div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <button id="sel-up" style="width:30px;height:28px;font-size:14px;color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:4px;cursor:pointer;">▲</button>
+        <button id="sel-down" style="width:30px;height:28px;font-size:14px;color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:4px;cursor:pointer;">▼</button>
+      </div>
+    </div>
     <div style="display:flex;gap:8px;margin-top:6px;">
       <button id="start-btn" style="height:30px;padding:0 18px;font-size:13px;font-weight:600;color:#fff;background:var(--accent);border:1px solid var(--accent);border-radius:6px;cursor:pointer;" disabled>开始</button>
       <button id="local-chart-btn" style="height:30px;padding:0 12px;font-size:12px;color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:6px;cursor:pointer;">本地谱面</button>
@@ -221,6 +227,7 @@ const audioFile = document.getElementById('audio-file');
 // ---------- 谱面列表 ----------
 let selectedChart = null;     // 当前选中的谱面索引项
 let availableCharts = [];
+let currentSel = -1;           // 当前选中索引
 
 async function loadChartList(){
   try{
@@ -228,6 +235,7 @@ async function loadChartList(){
     const data = await resp.json();
     availableCharts = data.charts || [];
     renderChartList();
+    if(availableCharts.length > 0) selectChart(0);
   }catch(err){
     overlayMsg.textContent = '无法加载谱面列表：' + err.message;
   }
@@ -248,17 +256,38 @@ function renderChartList(){
         <div style="font-size:10px;color:var(--muted);">${c.artist||''} · ${c.bpm} BPM · Lv.${c.level||1} ${c.audio?'':'· 无音乐'}</div>
       </div>
     `;
-    card.onclick = ()=>{
-      selectedChart = c;
-      document.querySelectorAll('#chart-list > div').forEach(d => d.style.borderColor = 'var(--border)');
-      card.style.borderColor = 'var(--accent)';
-      startBtn.disabled = false;
-      // 自动加载谱面数据
-      loadChartData(c);
-    };
+    card.onclick = ()=> selectChart(i);
     chartListEl.appendChild(card);
   });
 }
+
+function selectChart(i){
+  if(i < 0 || i >= availableCharts.length) return;
+  currentSel = i;
+  selectedChart = availableCharts[i];
+  const cards = chartListEl.querySelectorAll('div');
+  cards.forEach((d, idx)=>{ d.style.borderColor = idx === i ? 'var(--accent)' : 'var(--border)'; });
+  startBtn.disabled = false;
+  // 自动滚动到选中项
+  if(cards[i]) cards[i].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  loadChartData(selectedChart);
+}
+
+function moveSel(delta){
+  if(availableCharts.length === 0) return;
+  const next = currentSel === -1 ? 0 : (currentSel + delta + availableCharts.length) % availableCharts.length;
+  selectChart(next);
+}
+
+// 上下按钮和键盘
+document.getElementById('sel-up').onclick = ()=> moveSel(-1);
+document.getElementById('sel-down').onclick = ()=> moveSel(1);
+window.addEventListener('keydown', (e)=>{
+  if(state.running) return;
+  if(e.key === 'ArrowUp'){ e.preventDefault(); moveSel(-1); }
+  if(e.key === 'ArrowDown'){ e.preventDefault(); moveSel(1); }
+  if(e.key === 'Enter' && !startBtn.disabled) startGame();
+});
 
 async function loadChartData(c){
   try{
