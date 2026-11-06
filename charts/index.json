@@ -26,6 +26,15 @@
       "chart": "charts/stream/chart.json",
       "audio": null,
       "artist": "ForSchool"
+    },
+    {
+      "id": "chronostasis",
+      "title": "Chronostasis",
+      "bpm": 196,
+      "level": 31,
+      "chart": "charts/chronostasis/chart.json",
+      "audio": "charts/chronostasis/audio.ogg",
+      "artist": "Kurokotei"
     }
   ]
 }
