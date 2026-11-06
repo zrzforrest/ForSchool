@@ -156,6 +156,18 @@
   #overlay.show{display:flex;}
   #ov-title{font-size:24px;font-weight:700;}
   #ov-sub{font-size:13px;color:var(--muted);}
+  #ov-continue{
+    height:34px;
+    padding:0 18px;
+    font-size:14px;
+    font-weight:600;
+    color:#0d0f13;
+    background:#e8b33c;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  #ov-continue:hover{background:#f0c35a;}
   #ov-restart{
     height:34px;
     padding:0 16px;
@@ -248,6 +260,7 @@
   <div id="overlay">
     <div id="ov-title"></div>
     <div id="ov-sub"></div>
+    <button id="ov-continue" type="button">继续挑战</button>
     <button id="ov-restart" type="button">再来一局</button>
     <button id="ov-replay" type="button">回放本局</button>
   </div>
@@ -283,6 +296,7 @@
   const overlay  = document.getElementById('overlay');
   const ovTitle  = document.getElementById('ov-title');
   const ovSub    = document.getElementById('ov-sub');
+  const ovContinue = document.getElementById('ov-continue');
   const replaybar = document.getElementById('replaybar');
   const rpStep    = document.getElementById('rp-step');
   const rpDir     = document.getElementById('rp-dir');
@@ -356,25 +370,30 @@
       const d = cells[i];
       if(v){
         d.textContent = v;
-        d.className = 'cell t' + (v > 2048 ? 2048 : v);
+        // 超过 2048 沿用金色系，字号随位数递减，保证 4096 / 8192 / 16384… 都能完整显示
+        d.className = 'cell ' + (v > 2048 ? 't2048' : 't' + v);
+        const digits = String(v).length;
+        d.style.fontSize = digits <= 4 ? '' : digits === 5 ? '17px' : digits === 6 ? '14px' : '12px';
       } else {
         d.textContent = '';
         d.className = 'cell';
+        d.style.fontSize = '';
       }
     });
     scoreEl.textContent = score;
   }
 
-  function showOverlay(t, s){
+  function showOverlay(t, s, canContinue){
     ovTitle.textContent = t;
     ovSub.textContent = s;
+    ovContinue.style.display = canContinue ? '' : 'none';
     overlay.classList.add('show');
   }
 
   function check(){
     if(!won && grid.some(function(v){ return v >= 2048; })){
       won = true;
-      showOverlay('达成 2048！', '可以继续挑战更高分数');
+      showOverlay('达成 2048！', '已解锁上限，可继续挑战 4096、8192…', true);
       return;
     }
     if(emptyCells().length) return;
@@ -386,7 +405,7 @@
       if(grid[i] === right || grid[i] === down) return;
     }
     over = true;
-    showOverlay('游戏结束', '最终分数 ' + score);
+    showOverlay('游戏结束', '最终分数 ' + score, false);
   }
 
   // ===== 回放控制 =====
@@ -430,10 +449,12 @@
     if(over){
       ovTitle.textContent = '游戏结束';
       ovSub.textContent = '最终分数 ' + score;
+      ovContinue.style.display = 'none';
       overlay.classList.add('show');
     } else if(won){
       ovTitle.textContent = '达成 2048！';
-      ovSub.textContent = '可以继续挑战更高分数';
+      ovSub.textContent = '已解锁上限，可继续挑战 4096、8192…';
+      ovContinue.style.display = '';
       overlay.classList.add('show');
     }
   }
@@ -468,6 +489,10 @@
     else if(k === 'ArrowRight'){ e.preventDefault(); move('right'); }
   });
 
+  document.getElementById('ov-continue').onclick = function(){
+    overlay.classList.remove('show');
+    check();   // 若棋盘已满且无可合并，立即进入「游戏结束」
+  };
   document.getElementById('restart').onclick = newGame;
   document.getElementById('ov-restart').onclick = newGame;
   document.getElementById('ov-replay').onclick = openReplay;
