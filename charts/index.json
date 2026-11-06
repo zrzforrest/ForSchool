@@ -44,6 +44,15 @@
       "chart": "charts/chronostasis/chart.json",
       "audio": null,
       "artist": "Kurokotei"
+    },
+    {
+      "id": "xiaohualiuyan",
+      "title": "硝华流焰",
+      "bpm": 145,
+      "level": 15,
+      "chart": "charts/xiaohualiuyan/chart.json",
+      "audio": null,
+      "artist": "Unknown"
     }
   ]
 }
