@@ -8,6 +8,24 @@
       "chart": "charts/demo/chart.json",
       "audio": null,
       "artist": "ForSchool"
+    },
+    {
+      "id": "jack",
+      "title": "叠 (Jack)",
+      "bpm": 130,
+      "level": 5,
+      "chart": "charts/jack/chart.json",
+      "audio": null,
+      "artist": "ForSchool"
+    },
+    {
+      "id": "stream",
+      "title": "切 (Stream)",
+      "bpm": 180,
+      "level": 8,
+      "chart": "charts/stream/chart.json",
+      "audio": null,
+      "artist": "ForSchool"
     }
   ]
 }
