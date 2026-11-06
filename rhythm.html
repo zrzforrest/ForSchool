@@ -144,10 +144,15 @@
         <button id="sel-down" style="width:30px;height:28px;font-size:14px;color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:4px;cursor:pointer;">▼</button>
       </div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:6px;">
+    <div style="display:flex;gap:8px;margin-top:6px;align-items:center;">
       <button id="start-btn" style="height:30px;padding:0 18px;font-size:13px;font-weight:600;color:#fff;background:var(--accent);border:1px solid var(--accent);border-radius:6px;cursor:pointer;" disabled>开始</button>
       <button id="local-chart-btn" style="height:30px;padding:0 12px;font-size:12px;color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:6px;cursor:pointer;">本地谱面</button>
       <button id="local-audio-btn" style="height:30px;padding:0 12px;font-size:12px;color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:6px;cursor:pointer;">本地音乐</button>
+      <select id="speed-select" style="height:30px;padding:0 6px;font-size:12px;color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:6px;cursor:pointer;">
+        <option value="800">800 px/s</option>
+        <option value="1000" selected>1000 px/s</option>
+        <option value="1200">1200 px/s</option>
+      </select>
     </div>
     <input type="file" id="chart-file" accept=".json,application/json" style="display:none">
     <input type="file" id="audio-file" accept="audio/*" style="display:none">
@@ -181,7 +186,7 @@ const W = 500, H = 331;                 // canvas 尺寸
 const LANES = 4;
 const LANE_W = W / LANES;               // 每条轨道宽 125
 const HIT_LINE_Y = H - 18;             // 判定线 y（距 canvas 顶）
-const SPEED = 800;                     // 下落速度 px/s
+let SPEED = 1000;                      // 下落速度 px/s（可选 800/1000/1200）
 const NOTE_H = 14, NOTE_W = LANE_W - 14;
 
 // 判定窗口（毫秒）
@@ -214,6 +219,8 @@ const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const overlay = document.getElementById('overlay');
 const startBtn = document.getElementById('start-btn');
+const speedSelect = document.getElementById('speed-select');
+speedSelect.onchange = ()=>{ SPEED = parseInt(speedSelect.value); };
 const scoreEl = document.getElementById('score-val');
 const comboEl = document.getElementById('combo-val');
 const accEl = document.getElementById('acc-val');
