@@ -35,6 +35,15 @@
       "chart": "charts/chronostasis/chart.json",
       "audio": "charts/chronostasis/audio.ogg",
       "artist": "Kurokotei"
+    },
+    {
+      "id": "chronostasis-nomusic",
+      "title": "Chronostasis (无音乐)",
+      "bpm": 196,
+      "level": 31,
+      "chart": "charts/chronostasis/chart.json",
+      "audio": null,
+      "artist": "Kurokotei"
     }
   ]
 }
